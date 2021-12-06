@@ -169,6 +169,11 @@ always @(*) begin
     if (tag_rs2 == `emptyTag) data_rs2 = data_rs2_reg;
     else if (data_rs2_rob != `emptyData) data_rs2 = data_rs2_rob;
     else data_rs2 = `emptyData;
+    //about shamt  data_rs2 := shamt
+    if (op == 7'b0010011 && (funct3 == 3'b001 || funct3 == 3'b101)) begin
+        data_rs2 = rs2;
+        tag_rs2 = `emptyTag;
+    end
     
     dest_rs = tag_rob;
     op_type_to_rs = op_type;
