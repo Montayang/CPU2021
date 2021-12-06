@@ -191,13 +191,13 @@ always @(*) begin
     data_rs2_to_lsb = data_rs2;
     imm_to_lsb = imm;
     pc_to_lsb = pc_inst;
-    if (if_ls) begin
+    if (if_ls && if_rs_idle) begin
         if_issue_lsb = `TRUE;
         if_issue_rs = `FALSE;
-    end else begin
+    end else if (!if_ls && if_lsb_idle) begin
         if_issue_rs = `TRUE;
         if_issue_lsb = `FALSE;
-    end 
+    end
 end
 
 endmodule
