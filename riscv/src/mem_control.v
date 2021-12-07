@@ -5,8 +5,8 @@
 module mem_control (
     input wire clk,
     input wire rst,
-    inout wire rdy,
-    
+    input wire rdy,
+    input wire clear,
     //ports with pc
     output wire [`instWidth-1:0] instOut
 );
