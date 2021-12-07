@@ -45,8 +45,7 @@ module decoder(
     output reg [`dataWidth-1:0] data_rs1_to_lsb,
     output reg [`tagWidth-1:0] tag_rs2_to_lsb,
     output reg [`dataWidth-1:0] data_rs2_to_lsb,
-    output reg [`immWidth-1:0] imm_to_lsb,
-    output reg [`addrWidth-1:0] pc_to_lsb
+    output reg [`immWidth-1:0] imm_to_lsb
 );
 
 reg [`immWidth-1:0] imm;
@@ -190,7 +189,6 @@ always @(*) begin
     tag_rs2_to_lsb = tag_rs2;
     data_rs2_to_lsb = data_rs2;
     imm_to_lsb = imm;
-    pc_to_lsb = pc_inst;
     if (if_ls && if_rs_idle) begin
         if_issue_lsb = `TRUE;
         if_issue_rs = `FALSE;

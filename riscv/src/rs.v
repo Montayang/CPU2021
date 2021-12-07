@@ -8,7 +8,7 @@ module rs (
     input wire rdy,
     input wire clear, 
     //ports with decoder
-    output reg if_idle,
+    output wire if_idle,
     input wire if_issue_rs,
     input wire [`tagWidth-1:0] dest_rs,
     input wire [`opTypeWidth-1:0] op_type_to_rs,
@@ -43,19 +43,15 @@ module rs (
     reg [4:0] busy_entry;//the number of busy entry
     reg [4:0] pos_for_newInst;
     reg [4:0] pos_to_ex;
+    assign if_idle = busy_entry != `rsSize;
 
 always @(posedge clk) begin
     if (rst || clear) begin
         for (integer i=0; i<`rsSize; i++) if_busy_entry[i] = `FALSE;
         busy_entry <= 0;
-        if_idle = `FALSE;
     end else if (rdy) begin
         //recive from decoder
-        if (busy_entry == `rsSize) if_idle = `FALSE;
-        else if (if_issue_rs) begin
-            for (integer i=`rsSize-1; i>=0; i--) begin
-                if (!if_busy_entry[i]) pos_for_newInst <= i;
-            end
+        if (if_issue_rs && if_idle) begin
             if_busy_entry[pos_for_newInst] <= `TRUE;
             busy_entry <= busy_entry + 1;
             dest_entry[pos_for_newInst] <= dest_rs;
@@ -66,8 +62,6 @@ always @(posedge clk) begin
             Q2_entry[pos_for_newInst] <= tag_rs2_to_rs;
             imm_entry[pos_for_newInst] <= imm_to_rs;
             pc_entry[pos_for_newInst] <= pc_to_rs;
-            if (busy_entry == `rsSize) if_idle = `FALSE;
-            else if_idle = `TRUE;
         end
         //recive from rob
         for (integer i=0; i<`rsSize; i++) begin

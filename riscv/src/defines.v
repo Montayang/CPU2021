@@ -30,6 +30,8 @@
 `define TRUE          1'b1
 `define FALSE         1'b0
 
+`define IO_ADDR      32'h30000
+
 `define LUI       6'b000001
 `define AUIPC     6'b000010
 `define JAL       6'b000011
