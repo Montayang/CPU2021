@@ -37,20 +37,17 @@ module regfile(
     end
 
     always @(*) begin
-        if (rst) begin
-            data_rs1 = 0;
-            tag_rs1 = `emptyTag;
+        data_rs1 = `emptyData;
+        tag_rs1 = `emptyTag;
+        data_rs2 = `emptyData;
+        tag_rs2 = `emptyTag;
+        if (pos_rs1 != `emptyReg) begin
+            data_rs1 = data[pos_rs1];
+            tag_rs1 = tag[pos_rs1];
         end
-        data_rs1 = data[pos_rs1];
-        tag_rs1 = tag[pos_rs1];
-    end
-
-    always @(*) begin
-        if (rst) begin
-            data_rs1 = 0;
-            tag_rs1 = `emptyTag;
+        if (pos_rs2 != `emptyReg) begin
+            data_rs2 = data[pos_rs2];
+            tag_rs2 = tag[pos_rs2];
         end
-        data_rs2 = data[pos_rs2];
-        tag_rs2 = tag[pos_rs2];
     end
 endmodule

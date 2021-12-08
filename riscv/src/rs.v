@@ -45,57 +45,59 @@ module rs (
     reg [4:0] pos_to_ex;
     assign if_idle = busy_entry != `rsSize;
 
-always @(posedge clk) begin
-    if (rst || clear) begin
-        for (integer i=0; i<`rsSize; i++) if_busy_entry[i] = `FALSE;
-        busy_entry <= 0;
-    end else if (rdy) begin
-        //recive from decoder
-        if (if_issue_rs && if_idle) begin
-            if_busy_entry[pos_for_newInst] <= `TRUE;
-            busy_entry <= busy_entry + 1;
-            dest_entry[pos_for_newInst] <= dest_rs;
-            op_entry[pos_for_newInst] <= op_type_to_rs;
-            V1_entry[pos_for_newInst] <= data_rs1_to_rs;
-            V2_entry[pos_for_newInst] <= data_rs2_to_rs;
-            Q1_entry[pos_for_newInst] <= tag_rs1_to_rs;
-            Q2_entry[pos_for_newInst] <= tag_rs2_to_rs;
-            imm_entry[pos_for_newInst] <= imm_to_rs;
-            pc_entry[pos_for_newInst] <= pc_to_rs;
+    always @(posedge clk) begin
+        if (rst || clear) begin
+            for (integer i=0; i<`rsSize; i++) if_busy_entry[i] = `FALSE;
+            busy_entry <= 0;
+        end else if (rdy) begin
+            //recive from decoder
+            if (if_issue_rs && if_idle) begin
+                if_busy_entry[pos_for_newInst] <= `TRUE;
+                busy_entry <= busy_entry + 1;
+                dest_entry[pos_for_newInst] <= dest_rs;
+                op_entry[pos_for_newInst] <= op_type_to_rs;
+                V1_entry[pos_for_newInst] <= data_rs1_to_rs;
+                V2_entry[pos_for_newInst] <= data_rs2_to_rs;
+                Q1_entry[pos_for_newInst] <= tag_rs1_to_rs;
+                Q2_entry[pos_for_newInst] <= tag_rs2_to_rs;
+                imm_entry[pos_for_newInst] <= imm_to_rs;
+                pc_entry[pos_for_newInst] <= pc_to_rs;
+            end
+            //recive from rob
+            if (tag_renew != `emptyTag) begin
+                for (integer i=0; i<`rsSize; i++) begin
+                    if (Q1_entry[i] == tag_renew) begin
+                        V1_entry[i] <= data_renew;
+                        Q1_entry[i] <= `emptyTag;
+                    end
+                    if (Q2_entry[i] == tag_renew) begin
+                        V2_entry[i] <= data_renew;
+                        Q2_entry[i] <= `emptyTag;
+                    end
+                end
+            end
+            //issue to ex
+            if (pos_to_ex >= 0 && pos_to_ex < `rsSize) begin
+                if_busy_entry[pos_to_ex] <= `FALSE;
+                busy_entry <= busy_entry - 1;
+                op_type_to_ex  =   op_entry[pos_to_ex];
+                data_rs1_to_ex =   V1_entry[pos_to_ex];
+                data_rs2_to_ex =   V2_entry[pos_to_ex];
+                imm_to_ex      =  imm_entry[pos_to_ex];
+                pc_to_ex       =   pc_entry[pos_to_ex];
+                tag_in_rob     = dest_entry[pos_to_ex];
+            end
         end
-        //recive from rob
+    end
+        
+    always @(*) begin
         for (integer i=0; i<`rsSize; i++) begin
-            if (Q1_entry[i] == tag_renew) begin
-                V1_entry[i] <= data_renew;
-                Q1_entry[i] <= `emptyTag;
-            end
-            if (Q2_entry[i] == tag_renew) begin
-                V2_entry[i] <= data_renew;
-                Q2_entry[i] <= `emptyTag;
-            end
+            if (if_busy_entry[i] && Q1_entry[i] == `emptyTag && Q1_entry[i] == `emptyTag) ready_entry[i]=`TRUE;
+            else ready_entry[i]=`FALSE;
         end
-        //issue to ex
-        if (pos_to_ex >= 0 && pos_to_ex < `rsSize) begin
-            if_busy_entry[pos_to_ex] <= `FALSE;
-            busy_entry <= busy_entry - 1;
-            op_type_to_ex  =   op_entry[pos_to_ex];
-            data_rs1_to_ex =   V1_entry[pos_to_ex];
-            data_rs2_to_ex =   V2_entry[pos_to_ex];
-            imm_to_ex      =  imm_entry[pos_to_ex];
-            pc_to_ex       =   pc_entry[pos_to_ex];
-            tag_in_rob     = dest_entry[pos_to_ex];
+        for (integer i=0; i<`rsSize; i++) begin
+            if (ready_entry[i]) pos_to_ex = i;
         end
     end
-end
-    
-always @(*) begin
-    for (integer i=0; i<`rsSize; i++) begin
-        if (if_busy_entry[i] && Q1_entry[i] == `emptyTag && Q1_entry[i] == `emptyTag) ready_entry[i]=`TRUE;
-        else ready_entry[i]=`FALSE;
-    end
-    for (integer i=0; i<`rsSize; i++) begin
-        if (ready_entry[i]) pos_to_ex = i;
-    end
-end
 
 endmodule

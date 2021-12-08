@@ -26,6 +26,7 @@
 `define emptyOp       5'b0
 `define emptyTag      5'b10000
 `define emptyData    32'b11111111111111111111111111111111
+`define emptyReg      6'b100000
 
 `define TRUE          1'b1
 `define FALSE         1'b0
