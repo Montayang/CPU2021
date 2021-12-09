@@ -16,6 +16,7 @@ module decoder(
     input wire [`dataWidth-1:0] data_rs2_reg,
     input wire [`tagWidth-1:0] tag_rs2_reg,
     output reg [`tagWidth-1:0] tag_rd_to_reg,//for regfile to rename the objective reg
+    output reg [`regWidth-1:0] rd_to_rename,
     //ports with rob
     input wire if_rob_idle,
     output reg [`regWidth-1:0] tag_rs1_to_rob,
@@ -67,24 +68,49 @@ module decoder(
     assign rs2 = inst_from_pc[`rs2Range];
 
     always @(*) begin
+        if_station_idle = `TRUE;
+        if (!if_rob_idle) if_station_idle = `FALSE;
+        else if (if_ls && !if_lsb_idle) if_station_idle = `FALSE;
+        else if (!if_ls && !if_rs_idle) if_station_idle = `FALSE;
         op_type = `emptyOp;
-        if (pc_inst != `emptyInst) begin
+        pos_rs1_to_reg = `emptyReg;
+        pos_rs2_to_reg = `emptyReg;
+        tag_rs1_to_rob = `emptyTag;
+        tag_rs2_to_rob = `emptyTag;
+        op_to_rob = `emptyOp;
+        rd_to_rob = `emptyAddr;
+        rd_to_rename = `emptyReg;
+        tag_rd_to_reg = `emptyTag;
+        if (inst_from_pc != `emptyInst) begin
             case (op)
                 7'b0110111 : begin
                     op_type = `LUI;
                     imm = {inst_from_pc[31:12], {12{1'b0}}};
+                    rd_to_rob = {27'b0,rd[4:0]};
+                    tag_rd_to_reg = tag_rob;
+                    rd_to_rename = rd;
                 end
                 7'b0010111 : begin
                     op_type = `AUIPC;
                     imm = {inst_from_pc[31:12], {12{1'b0}}};
+                    rd_to_rob = {27'b0,rd[4:0]};
+                    tag_rd_to_reg = tag_rob;
+                    rd_to_rename = rd;
                 end
                 7'b1101111 : begin
                     op_type = `JAL;
                     imm = {{12{inst_from_pc[31]}}, inst_from_pc[19:12], inst_from_pc[20], inst_from_pc[30:21], 1'b0};
+                    rd_to_rob = {27'b0,rd[4:0]};
+                    tag_rd_to_reg = tag_rob;
+                    rd_to_rename = rd;
                 end
                 7'b1100111 : begin
                     op_type = `JALR;
                     imm = {{20{inst_from_pc[31]}}, inst_from_pc[31:20]};
+                    rd_to_rob = {27'b0,rd[4:0]};
+                    tag_rd_to_reg = tag_rob;
+                    rd_to_rename = rd;
+                    pos_rs1_to_reg = rs1;
                 end
                 7'b1100011 : begin
                     case (funct3)
@@ -96,6 +122,8 @@ module decoder(
                         3'b111 : op_type = `BGEU;
                     endcase
                     imm = {{20{inst_from_pc[31]}}, inst_from_pc[7], inst_from_pc[30:25], inst_from_pc[11:8], 1'b0};
+                    pos_rs1_to_reg = rs1;
+                    pos_rs2_to_reg = rs2;
                 end
                 7'b0000011 : begin
                     case (funct3)
@@ -106,6 +134,10 @@ module decoder(
                         3'b101 : op_type = `LHU;
                     endcase
                     imm = {{20{inst_from_pc[31]}}, inst_from_pc[31:20]};
+                    rd_to_rob = {27'b0,rd[4:0]};
+                    tag_rd_to_reg = tag_rob;
+                    rd_to_rename = rd;
+                    pos_rs1_to_reg = rs1;
                 end
                 7'b0100011 : begin
                     case (funct3)
@@ -114,6 +146,8 @@ module decoder(
                         3'b010 : op_type = `SW;
                     endcase
                     imm = {{20{inst_from_pc[31]}}, inst_from_pc[31:25], inst_from_pc[11:7]};
+                    pos_rs1_to_reg = rs1;
+                    pos_rs2_to_reg = rs2;
                 end
                 7'b0010011 : begin
                     case (funct3)
@@ -127,6 +161,10 @@ module decoder(
                         3'b101 : op_type = funct7 == 7'b0000000 ? `SRLI : `SRAI;
                     endcase
                     imm = {{20{inst_from_pc[31]}}, inst_from_pc[31:20]};
+                    rd_to_rob = {27'b0,rd[4:0]};
+                    tag_rd_to_reg = tag_rob;
+                    rd_to_rename = rd;
+                    pos_rs1_to_reg = rs1;
                 end
                 7'b0110011 : begin
                     case (funct3)
@@ -139,26 +177,22 @@ module decoder(
                         3'b110 : op_type = `OR;
                         3'b111 : op_type = `AND;
                     endcase
-                    imm = inst_from_pc;
+                    imm = 32'b0;
+                    rd_to_rob = {27'b0,rd[4:0]};
+                    tag_rd_to_reg = tag_rob;
+                    rd_to_rename = rd;
+                    pos_rs1_to_reg = rs1;
+                    pos_rs2_to_reg = rs2;
                 end
             endcase
+            tag_rs1_to_rob = tag_rs1_reg;
+            tag_rs2_to_rob = tag_rs2_reg;
+            op_to_rob = op_type;
         end
     end
         
     always @(*) begin
-        if_station_idle = `TRUE;
-        if (!if_rob_idle) if_station_idle = `FALSE;
-        else if (if_ls && !if_lsb_idle) if_station_idle = `FALSE;
-        else if (!if_ls && !if_rs_idle) if_station_idle = `FALSE;
-        
-        pos_rs1_to_reg = rs1;
-        pos_rs2_to_reg = rs2;
-        tag_rs1_to_rob = tag_rs1_reg;
-        tag_rs2_to_rob = tag_rs2_reg;
-        op_to_rob = op_type;
-        rd_to_rob = rd;
-        tag_rd_to_reg = tag_rob;
-        
+        //get the information of rs1 and rs2
         tag_rs1 = tag_rs1_reg;
         if (tag_rs1 == `emptyTag) data_rs1 = data_rs1_reg;
         else if (data_rs1_rob != `emptyData) data_rs1 = data_rs1_rob;
@@ -167,12 +201,12 @@ module decoder(
         if (tag_rs2 == `emptyTag) data_rs2 = data_rs2_reg;
         else if (data_rs2_rob != `emptyData) data_rs2 = data_rs2_rob;
         else data_rs2 = `emptyData;
-        //about shamt  data_rs2 := shamt
+           //about shamt  data_rs2 := shamt
         if (op == 7'b0010011 && (funct3 == 3'b001 || funct3 == 3'b101)) begin
             data_rs2 = rs2;
             tag_rs2 = `emptyTag;
         end
-        
+        //issue
         dest_rs = tag_rob;
         op_type_to_rs = op_type;
         tag_rs1_to_rs = tag_rs1;

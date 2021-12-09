@@ -50,7 +50,8 @@ module rob (
     //ports to clear
     output reg clear_reg,
     output reg clear_rs,
-    output reg clear_lsb
+    output reg clear_lsb,
+    output reg clear_mem
 );
     localparam IDLE = 1'b0, WAIT = 1'b1;
     reg status;
@@ -93,6 +94,7 @@ module rob (
             clear_reg = `FALSE;
             clear_rs = `FALSE;
             clear_lsb = `FALSE;
+            clear_mem = `FALSE;
             if_out_mem = `FALSE;
             if_out_mem_io = `FALSE;
             if_commit = `FALSE;
@@ -156,6 +158,7 @@ module rob (
                                 clear_lsb <= `TRUE;
                                 clear_reg <= `TRUE;
                                 clear_rs <= `TRUE;
+                                clear_mem <= `TRUE;
                                 if_jump <= `TRUE;
                                 pc_to_jump <= new_pc_entry[head];
                                 if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
@@ -166,6 +169,7 @@ module rob (
                                     clear_lsb <= `TRUE;
                                     clear_reg <= `TRUE;
                                     clear_rs <= `TRUE;
+                                    clear_mem <= `TRUE;
                                     if_jump <= `TRUE;
                                     pc_to_jump <= new_pc_entry[head];
                                 end
