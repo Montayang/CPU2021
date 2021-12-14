@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "defines.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/defines.v"
 
 module mem_control (
     input wire clk,
@@ -47,14 +47,16 @@ module mem_control (
             // if_pc <= `FALSE;
             // if_lsb <= `FALSE;
             // if_rob <= `FALSE;
-            //if_io <= `FALSE;
+            // if_io <= `FALSE;
+            status <= IDLE;
+            stages <= 1;
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
             if_out_to_lsb <= `FALSE;
             if_rw <= `FALSE;
             addr_to_ram <= `emptyAddr;
             data_to_ram <= `emptyData;
-        end if (rdy) begin
+        end else if (rdy) begin
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
             if_out_to_lsb <= `FALSE;
@@ -91,8 +93,9 @@ module mem_control (
                     if (stages == 5) begin
                         inst_out_to_pc[31:24] <= get_data_ram;
                         if_out_inst_to_pc <= `TRUE;
+                    end
+                    if (stages == 6) begin
                         status <= IDLE;
-                        stages <= 1;
                     end
                 end
                 LSB : begin

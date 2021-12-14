@@ -26,6 +26,8 @@
 ***************************************************************************************************/
 
 // modification allowed for debugging purposes
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/common/fifo/fifo.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/common/uart/uart.v"
 
 module hci
 #(

@@ -1,0 +1,1 @@
+iverilog   src/common/block_ram/block_ram.v src/common/fifo/fifo.v   src/common/uart/uart_rx.v src/common/uart/uart_tx.v src/common/uart/uart_baud_clk.v  src/common/uart/uart.v src/defines.v src/decoder.v src/ex.v src/ls_buffer.v src/pc.v src/mem_control.v src/rs.v src/rob.v src/regfile.v src/ram.v src/cpu.v src/hci.v   src/riscv_top.v  sim/testbench.v -o test/a.out

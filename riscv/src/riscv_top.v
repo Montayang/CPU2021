@@ -1,5 +1,9 @@
 // riscv top module file
 // modification allowed for debugging purposes
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/hci.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/cpu.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/ram.v"
+
 
 module riscv_top
 #(

@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "defines.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/defines.v"
 
 module lsb (
     input wire clk,
@@ -55,27 +55,29 @@ module lsb (
     assign if_idle = if_empty || ((head != tail) && !((tail+1 == head) || (tail == `lsbSize && head == 1)));
     assign cur_inst_addr = addr_entry[head];
 
+    integer i;
     always @(*) begin
-        for(integer i = 0; i < `lsbSize; i++) begin
+        for(i = 0; i < `lsbSize; i=i+1) begin
             ready_entry[i] = (if_busy_entry[i] == `TRUE) && (Q2_entry[i] == `emptyTag) && (address_ready_entry[i] == `TRUE);
             to_cclate_addr_ready_entry[i] = (if_busy_entry[i] == `TRUE) && (Q1_entry[i] == `emptyTag) && (address_ready_entry[i] == `FALSE);
         end
-        for(integer i = 0; i < `lsbSize; i++) begin
+        for(i = 0; i < `lsbSize; i=i+1) begin
             if (to_cclate_addr_ready_entry[i]) pos_to_cclate_addr = i;   
         end
     end
 
 
+    integer j;
     always @(posedge clk) begin
         if (rst || clear) begin
             status <= IDLE;
             if_empty <= `TRUE;
             head <= 1;
             tail <= 1;
-            wb_addr = `emptyAddr;
-            wb_data = `emptyData;
-            wb_pos_in_rob = `emptyTag;
-            for (integer j = 0;j < `lsbSize; j++) begin
+            wb_addr <= `emptyAddr;
+            wb_data <= `emptyData;
+            wb_pos_in_rob <= `emptyTag;
+            for (j = 0;j < `lsbSize; j=j+1) begin
                 if_busy_entry[j] <= `FALSE;
                 address_ready_entry[j] <= `FALSE;
                 addr_entry[j] <= `emptyAddr;
@@ -90,12 +92,12 @@ module lsb (
                 Q1_entry[tail] <= tag_rs1_to_lsb;
                 Q2_entry[tail] <= tag_rs2_to_lsb;
                 imm_entry[tail] <= imm_to_lsb;
-                if_empty = `FALSE;
+                if_empty <= `FALSE;
                 tail <= tail == `lsbSize ? 1 : tail+1;
             end
             //recive from rob
             if (tag_renew != `emptyTag) begin
-                for (integer i=0; i<`lsbSize; i++) begin
+                for (i=0; i<`lsbSize; i=i+1) begin
                     if (Q1_entry[i] == tag_renew) begin
                         V1_entry[i] <= data_renew;
                         Q1_entry[i] <= `emptyTag;
@@ -118,7 +120,7 @@ module lsb (
                                 //ex load in rob
                                 if_busy_entry[head] <= `FALSE;
                                 address_ready_entry[head] <= `FALSE;
-                                out_ioin = `TRUE;
+                                out_ioin <= `TRUE;
                                 wb_pos_in_rob <= dest_entry[head];
                                 if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
                                 head <= (head == `lsbSize) ? 1:head+1;
@@ -159,8 +161,8 @@ module lsb (
                 end else begin
                     if (if_get_mem) begin
                         status <= IDLE;
-                        wb_data = data_mem;
-                        if_busy_entry[head] = `FALSE;
+                        wb_data <= data_mem;
+                        if_busy_entry[head] <= `FALSE;
                         address_ready_entry[head] <= `FALSE;
                         wb_pos_in_rob <= dest_entry[head];
                         if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;

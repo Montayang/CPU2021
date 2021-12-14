@@ -1,11 +1,12 @@
 `timescale 1ns/1ps
 
-`include "defines.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/defines.v"
 
 module rob (
     input wire clk,
     input wire rst,
     input wire rdy,
+    input wire clear,
     //ports with decoder
     output wire if_idle,
     input wire [`regWidth-1:0] tag_rs1_decoder,
@@ -51,10 +52,12 @@ module rob (
     output reg clear_reg,
     output reg clear_rs,
     output reg clear_lsb,
-    output reg clear_mem
+    output reg clear_mem,
+    output reg clear_rob
 );
     localparam IDLE = 1'b0, WAIT = 1'b1;
     reg status;
+    reg if_busy_entry[`robSize-1:0];
     reg [`dataWidth-1:0] value_entry[`robSize-1:0];
     reg [`addrWidth-1:0] destination_entry[`robSize-1:0];//may be address(when S-type) or
     reg ready_entry [`robSize-1:0];
@@ -64,7 +67,8 @@ module rob (
 
     reg [4:0] head, tail;
     reg if_empty;
-    assign if_idle = if_empty || ((head != tail) && !((tail+1 == head) || (tail == `lsbSize && head == 1)));
+    assign if_idle = if_empty || ((head != tail) && !((tail+1 == head) || (tail == `robSize && head == 1)));
+    reg [2:0] count;
 
     //decoder wants to get the opration value
     assign data_rs1_to_decoder = ready_entry[tag_rs1_decoder] ? value_entry[tag_rs1_decoder] : `emptyData;
@@ -72,43 +76,53 @@ module rob (
     assign tag_to_decoder = if_idle ? tail : `emptyTag;
 
     reg j;
+    integer i;
     always @(*) begin
         j = `FALSE;
-        for (integer i=1; i<`robSize; i++) begin
+        for (i=1; i<`robSize; i=i+1) begin
             if ((op_entry[i] == `SB || op_entry[i] == `SH || op_entry[i] == `SW) && cur_inst_addr_lsb == destination_entry[i]) j = `TRUE; 
         end
         if (j) if_addr_hzd_to_lsb = `TRUE;
         else if_addr_hzd_to_lsb = `FALSE;
     end
 
+    integer k;
     always @(posedge clk) begin
-        if (rst || clear_reg) begin
+                    //for (i=1; i<4; i=i+1) $display($time," [ROB]busy: ",if_busy_entry[i]," op : ",op_entry[i]," new_pc : ",new_pc_entry[i],"  ",i);
+        if (rst || clear) begin
             status <= IDLE;
             if_empty <= `TRUE;
             head <= 1;
             tail <= 1;
-            if_jump = `FALSE;
-            pc_to_jump = `emptyAddr;
-            tag_renew_to_rs = `emptyTag;
-            tag_renew_to_lsb = `emptyTag;
-            clear_reg = `FALSE;
-            clear_rs = `FALSE;
-            clear_lsb = `FALSE;
-            clear_mem = `FALSE;
-            if_out_mem = `FALSE;
-            if_out_mem_io = `FALSE;
-            if_commit = `FALSE;
-            for (integer j = 0;j < `lsbSize; j++) begin
-                ready_entry[j] <= `FALSE;
+            if_jump <= `FALSE;
+            pc_to_jump <= `emptyAddr;
+            tag_renew_to_rs <= `emptyTag;
+            tag_renew_to_lsb <= `emptyTag;
+            count <= count + 1;
+            if (rst || count == 2) begin
+                clear_reg <= `FALSE;
+                clear_rs <= `FALSE;
+                clear_lsb <= `FALSE;
+                clear_mem <= `FALSE;
+                clear_rob <= `FALSE;
+            end
+            if_out_mem <= `FALSE;
+            if_out_mem_io <= `FALSE;
+            if_commit <= `FALSE;
+            for (k = 0;k < `robSize; k=k+1) begin
+                ready_entry[k] <= `FALSE;
+                if_busy_entry[k] <= `FALSE;
             end
         end else if (rdy) begin
-            tag_renew_to_lsb = `emptyTag;
-            tag_renew_to_rs = `emptyTag;
-            if_commit = `FALSE;
-            if_out_mem = `FALSE;
-            if_out_mem_io = `FALSE;
+            tag_renew_to_lsb <= `emptyTag;
+            tag_renew_to_rs <= `emptyTag;
+            if_commit <= `FALSE;
+            if_out_mem <= `FALSE;
+            if_out_mem_io <= `FALSE;
+            if_jump <= `FALSE;
             //recive inst from decoder
             if (op_decoder != `emptyOp && if_idle) begin
+                if_busy_entry[tail] <= `TRUE;
                 op_entry[tail] <=  op_decoder;
                 destination_entry[tail] <= rd_decoder;
                 new_pc_entry[tail] <= `emptyAddr;
@@ -121,9 +135,9 @@ module rob (
                 value_entry[wb_pos_ex] <= wb_data_ex;
                 new_pc_entry[wb_pos_ex] <= pc_to_jump_ex;
                 ready_entry[wb_pos_ex] <= `TRUE;
-                tag_renew_to_rs = wb_pos_ex;
-                data_renew_to_rs = wb_data_ex;
-                tag_renew_to_lsb = wb_pos_ex;
+                tag_renew_to_rs <= wb_pos_ex;
+                data_renew_to_rs <= wb_data_ex;
+                tag_renew_to_lsb <= wb_pos_ex;
                 data_renew_to_lsb <= wb_data_ex;
             end
             if (wb_pos_lsb != `emptyTag) begin
@@ -131,13 +145,13 @@ module rob (
                 ready_entry[wb_pos_lsb] <= in_ioin ? `FALSE : `TRUE;//load with load have not ex
                 if_IO[wb_pos_lsb] <= in_ioin ? `TRUE : `FALSE;
                 if (op_entry[wb_pos_lsb] == `SB || op_entry[wb_pos_lsb] == `SH || op_entry[wb_pos_lsb] == `SW) destination_entry[wb_data_lsb] <= wb_addr_lsb;
-                tag_renew_to_rs = wb_pos_lsb;
-                data_renew_to_rs = wb_data_lsb;
-                tag_renew_to_lsb = wb_pos_lsb;
+                tag_renew_to_rs <= wb_pos_lsb;
+                data_renew_to_rs <= wb_data_lsb;
+                tag_renew_to_lsb <= wb_pos_lsb;
                 data_renew_to_lsb <= wb_data_lsb;
             end
             //commit
-            if (ready_entry[head] == `TRUE) begin
+            if (if_busy_entry[head] && ready_entry[head]) begin
                 if (status == IDLE) begin
                     if (op_entry[head] != `emptyOp) begin
                         case (op_entry[head])
@@ -150,7 +164,7 @@ module rob (
                                 else if (op_entry[head] == `SH) out_mem_size <= 2;
                                 else out_mem_size <= 4;
                             end
-                            `JALR : begin
+                            `JALR, `JAL: begin
                                 if_commit <= `TRUE;
                                 pos_commit <= destination_entry[head][4:0];
                                 data_commit <= value_entry[head];
@@ -159,22 +173,28 @@ module rob (
                                 clear_reg <= `TRUE;
                                 clear_rs <= `TRUE;
                                 clear_mem <= `TRUE;
+                                clear_rob <= `TRUE;
+                                count <= 0;
                                 if_jump <= `TRUE;
                                 pc_to_jump <= new_pc_entry[head];
                                 if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
                                 head <= (head == `lsbSize) ? 1:head+1;
-                            end
+                                if_busy_entry[head] <= `FALSE;
+                             end
                             `BEQ,`BNE,`BLT,`BGE,`BLTU,`BGEU : begin
                                 if (new_pc_entry[head] != `emptyAddr) begin
                                     clear_lsb <= `TRUE;
                                     clear_reg <= `TRUE;
                                     clear_rs <= `TRUE;
                                     clear_mem <= `TRUE;
+                                    clear_rob <= `TRUE;
+                                    count <= 0;
                                     if_jump <= `TRUE;
                                     pc_to_jump <= new_pc_entry[head];
                                 end
                                 if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
                                 head <= (head == `lsbSize) ? 1:head+1;
+                                if_busy_entry[head] <= `FALSE;
                             end
                             default : begin
                                 if_commit <= `TRUE;
@@ -183,14 +203,16 @@ module rob (
                                 tag_commit <= head;
                                 if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
                                 head <= (head == `lsbSize) ? 1:head+1;
+                                if_busy_entry[head] <= `FALSE;
                             end
                         endcase
                     end
                 end else begin
                     if (if_get_mem == `TRUE) begin
-                        status = IDLE;
+                        status <= IDLE;
                         if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
                         head <= (head == `lsbSize) ? 1:head+1;
+                        if_busy_entry[head] <= `FALSE;
                     end
                 end
             end else if (if_IO[head]) begin

@@ -1,4 +1,6 @@
-`include "defines.v"
+`timescale 1ns/1ps
+
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/defines.v"
 
 module regfile(
     input wire clk,
@@ -25,16 +27,26 @@ module regfile(
     reg [`dataWidth-1:0] data[`regSize-1:0];
     reg [`tagWidth-1:0] tag[`regSize-1:0];
 
+    integer i;
     always @(posedge clk) begin
+                        //for (i=1; i<3; i=i+1) $display($time," [REG]data: ",data[i]," tag : ",tag[i],"  ",i);
         if (rst || clear) begin
-            for (integer i = 0; i < `regSize; i = i + 1) begin
+            if (if_commit) begin
+                if (tag[pos_commit] == tag_commit) begin
+                    tag[pos_commit] <= `emptyTag;
+                    data[pos_commit] <= data_commit;
+                end
+            end
+            for (i = 0; i < `regSize; i = i + 1) begin
                 if (!clear) data[i] <= 0;
                 tag[i] <= `emptyTag;
             end
         end else if (rdy) begin
             if (if_commit) begin
-                data[pos_commit] <= data_commit;
-                if (tag[pos_commit] == tag_commit) tag[pos_commit] <= `emptyTag;
+                if (tag[pos_commit] == tag_commit) begin
+                    tag[pos_commit] <= `emptyTag;
+                    data[pos_commit] <= data_commit;
+                end
             end
             //to rename the reg
             if (reg_to_rename != `emptyReg) begin

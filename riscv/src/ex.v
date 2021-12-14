@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "defines.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/defines.v"
 
 module ex (
     //ports with rs

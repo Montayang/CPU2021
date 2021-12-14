@@ -1,14 +1,14 @@
 // RISCV32I CPU top module
 // port modification allowed for debugging purposes
-`include "defines.v"
-`include "pc.v"
-`include "decoder.v"
-`include "rs.v"
-`include "regfile.v"
-`include "ls_buffer.v"
-`include "rob.v"
-`include "mem_control.v"
-`include "ex.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/defines.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/pc.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/decoder.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/rs.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/regfile.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/ls_buffer.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/rob.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/mem_control.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/ex.v"
 
 module cpu(
   input  wire                 clk_in,			// system clock signal
@@ -26,6 +26,7 @@ module cpu(
 );
 
 // implementation goes here
+wire PC_if_to_decoder;
 wire PC_if_output_pc;
 wire [`addrWidth-1:0] PC_pc_to_getInst;
 wire [`instWidth-1:0] PC_inst_decoder;
@@ -111,6 +112,7 @@ wire ROB_clear_reg;
 wire ROB_clear_rs;
 wire ROB_clear_lsb;
 wire ROB_clear_mem;
+wire ROB_clear_rob;
 
 wire MEM_if_out_inst_to_pc;
 wire [`instWidth-1:0] MEM_inst_out_to_pc;
@@ -120,6 +122,7 @@ wire MEM_if_out_to_lsb;
 wire [`addrWidth-1:0] MEM_data_out_to_lsb;
 
 pc pc_unit(
+  .if_to_decoder(PC_if_to_decoder),
   .clk(clk_in),
   .rst(rst_in),
   .rdy(rdy_in),
@@ -127,7 +130,6 @@ pc pc_unit(
   .pc_to_getInst(PC_pc_to_getInst),
   .inst_decoder(PC_inst_decoder),
   .pc_decoder(PC_pc_decoder),
-  .if_ls(PC_if_ls),
   .if_station_idle(DECODER_if_station_idle),
   .if_jump(ROB_if_jump),
   .pc_to_jump(ROB_pc_to_jump),
@@ -155,9 +157,9 @@ regfile regfile_unit(
 );
 
 decoder decoder_unit(
+  .if_get_inst(PC_if_to_decoder),
   .inst_from_pc(PC_inst_decoder),
   .pc_inst(PC_pc_decoder),
-  .if_ls(PC_if_ls),
   .if_station_idle(DECODER_if_station_idle),
   .pos_rs1_to_reg(DECODER_pos_rs1_to_reg),
   .pos_rs2_to_reg(DECODER_pos_rs2_to_reg),
@@ -267,6 +269,7 @@ rob rob_unit(
   .clk(clk_in),
   .rst(rst_in),
   .rdy(rdy_in),
+  .clear(ROB_clear_rob),
   .tag_rs1_decoder(DECODER_tag_rs1_to_rob),
   .tag_rs2_decoder(DECODER_tag_rs2_to_rob),
   .op_decoder(DECODER_op_to_rob),
@@ -303,6 +306,7 @@ rob rob_unit(
   .clear_rs(ROB_clear_rs),
   .clear_lsb(ROB_clear_lsb),
   .clear_mem(ROB_clear_mem),
+  .clear_rob(ROB_clear_rob),
   .if_get_mem(MEM_if_out_io_to_rob),
   .data_mem(MEM_data_io)
 );
