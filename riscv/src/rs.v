@@ -48,7 +48,7 @@ module rs (
 
     integer i;
     always @(posedge clk) begin
-                        for (i=1; i<4; i=i+1) $display($time," [RS]if_busy : ",if_busy_entry[i]," pc : %h",pc_entry[i]," tag : ",dest_entry[i]," Q1 : ",Q1_entry[i],"  ",i);
+                        //for (i=1; i<2; i=i+1) $display($time," [RS]if_busy : ",if_busy_entry[i]," pc : %h",pc_entry[i]," ready : ",ready_entry[i]," Q1 : ",Q1_entry[i],"  ",i);
         if (rst || clear) begin
             for (i=0; i<`rsSize; i=i+1) begin
                 if_busy_entry[i] <= `FALSE;

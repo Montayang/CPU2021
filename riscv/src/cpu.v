@@ -120,6 +120,7 @@ wire MEM_if_out_io_to_rob;
 wire [`dataWidth-1:0] MEM_data_io;
 wire MEM_if_out_to_lsb;
 wire [`addrWidth-1:0] MEM_data_out_to_lsb;
+wire MEM_if_store;
 
 pc pc_unit(
   .if_to_decoder(PC_if_to_decoder),
@@ -308,7 +309,8 @@ rob rob_unit(
   .clear_mem(ROB_clear_mem),
   .clear_rob(ROB_clear_rob),
   .if_get_mem(MEM_if_out_io_to_rob),
-  .data_mem(MEM_data_io)
+  .data_mem(MEM_data_io),
+  .if_stored(MEM_if_store)
 );
 
 mem_control mem_ctrl_unit(
@@ -333,6 +335,7 @@ mem_control mem_ctrl_unit(
   .data_io(MEM_data_io),
   .if_out_to_lsb(MEM_if_out_to_lsb),
   .data_out_to_lsb(MEM_data_out_to_lsb),
+  .if_stored(MEM_if_store),
   .if_uart_full(io_buffer_full),
   .if_rw(mem_wr),
   .addr_to_ram(mem_a),

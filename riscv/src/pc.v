@@ -38,17 +38,18 @@ module pc (
         end else if (rdy) begin
             if_to_decoder <= `FALSE;
             if (if_jump) begin
+                pc_to_getInst <= pc_to_jump;
                 PC <= pc_to_jump;
                 status <= IDLE;
             end else begin
                 if (status == IDLE) begin
-                    pc_to_getInst <= PC;
                     pc_decoder <= PC;
                     if_output_pc <= `TRUE;
                     status <= WAIT_FOR_INST;
                 end else if (status == WAIT_FOR_INST) begin
                     if (if_gotInst) begin
                         if (if_station_idle) begin
+                            pc_to_getInst <= PC + 4;
                             PC <= PC + 4;
                             if_to_decoder <= `TRUE;
                             inst_decoder <= inst_mem;
@@ -58,6 +59,7 @@ module pc (
                     end
                 end else if (status == BUSY_STATION) begin
                     if (if_station_idle) begin
+                        pc_to_getInst <= PC + 4;
                         PC <= PC + 4;
                         if_to_decoder <= `TRUE;
                         inst_decoder <= inst_mem;

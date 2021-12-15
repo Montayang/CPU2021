@@ -17,7 +17,8 @@ module mem_control (
     input wire if_get_rob_to_store,
     input wire [5:0] get_store_size,
     input wire [`addrWidth-1:0] get_store_addr,
-    input wire [`dataWidth-1:0] get_store_data,//the data to store
+    input wire [`dataWidth-1:0] get_store_data,
+    output reg if_stored,//to store
     input wire if_get_io_to_load,
     output reg if_out_io_to_rob,
     output reg [`dataWidth-1:0] data_io,//out the data got with io
@@ -37,17 +38,13 @@ module mem_control (
     localparam IDLE = 3'b000, PC = 3'b001, LSB = 3'b010, ROB = 3'b011, IO_READ = 3'b100;
     reg [2:0] status;
     reg [5:0] stages;
-    // reg if_pc;
-    // reg if_lsb;
-    // reg if_rob;
-    // reg if_io;
+    reg pc_flag;
+    reg lsb_flag;
+    reg rob_flag;
+    reg io_flag;
 
     always @(posedge clk) begin
         if (rst || clear) begin
-            // if_pc <= `FALSE;
-            // if_lsb <= `FALSE;
-            // if_rob <= `FALSE;
-            // if_io <= `FALSE;
             status <= IDLE;
             stages <= 1;
             if_out_inst_to_pc <= `FALSE;
@@ -56,32 +53,37 @@ module mem_control (
             if_rw <= `FALSE;
             addr_to_ram <= `emptyAddr;
             data_to_ram <= `emptyData;
+            pc_flag <= `FALSE;
+            lsb_flag <= `FALSE;
+            rob_flag <= `FALSE;
+            io_flag <= `FALSE;
         end else if (rdy) begin
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
             if_out_to_lsb <= `FALSE;
+            if_stored <= `FALSE;
             if_rw <= 0;
-            // if_pc <= if_get_pc;
-            // if_lsb <= if_get_lsb_to_load;
-            // if_rob <= if_get_rob_to_store;
-            // if_io <= if_get_io_to_load;
+            if (if_get_pc) pc_flag <= `TRUE;
+            if (if_get_lsb_to_load) lsb_flag <= `TRUE;
+            if (if_get_rob_to_store) rob_flag <= `TRUE;
+            if (if_get_io_to_load) io_flag <= `TRUE;
             addr_to_ram <= addr_to_ram + 1;
             stages <= stages + 1;
             case(status)
                 IDLE : begin
                     stages <= 1;
-                    if (if_get_io_to_load) begin
+                    if (io_flag) begin
                         status <= IO_READ;
                         addr_to_ram <= `IO_ADDR;
-                    end else if (if_get_rob_to_store) begin
+                    end else if (rob_flag) begin
                         status <= ROB;
                         if_rw <= 1;
                         addr_to_ram <= get_store_addr;
                         data_to_ram <= get_store_data;
-                    end else if (if_get_lsb_to_load) begin
+                    end else if (lsb_flag) begin
                         status <= LSB;
                         addr_to_ram <= get_load_addr;
-                    end else if (if_get_pc) begin
+                    end else if (pc_flag) begin
                         status <= PC;
                         addr_to_ram <= pc_get;
                     end
@@ -93,6 +95,7 @@ module mem_control (
                     if (stages == 5) begin
                         inst_out_to_pc[31:24] <= get_data_ram;
                         if_out_inst_to_pc <= `TRUE;
+                        pc_flag <= `FALSE;
                     end
                     if (stages == 6) begin
                         status <= IDLE;
@@ -107,6 +110,7 @@ module mem_control (
                                 if_out_to_lsb <= `TRUE;
                                 status <= IDLE;
                                 stages <= 1;
+                                lsb_flag <= `FALSE;
                             end
                         end
                         2 : begin
@@ -117,6 +121,7 @@ module mem_control (
                                 if_out_to_lsb <= `TRUE;
                                 status <= IDLE;
                                 stages <= 1;
+                                lsb_flag <= `FALSE;
                             end
                         end
                         4 : begin
@@ -128,6 +133,7 @@ module mem_control (
                                 if_out_to_lsb <= `TRUE;
                                 status <= IDLE;
                                 stages <= 1;
+                                lsb_flag <= `FALSE;
                             end
                         end
                     endcase
@@ -136,6 +142,8 @@ module mem_control (
                     if (stages > get_store_size) begin
                         status <= IDLE;
                         stages <= 1;
+                        rob_flag <= `FALSE;
+                        if_stored <= `TRUE;
                     end else begin
                         if_rw <= 1;
                         data_to_ram <= get_store_data;
@@ -148,6 +156,7 @@ module mem_control (
                         if_out_io_to_rob <= `TRUE;
                         status <= IDLE;
                         stages <= 1;
+                        io_flag <= `FALSE;
                     end
                 end
             endcase

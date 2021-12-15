@@ -48,7 +48,7 @@ module lsb (
     reg to_cclate_addr_ready_entry[`lsbSize-1:0];//for S-type to cclate the addr
     reg         address_ready_entry[`lsbSize-1:0];
     reg                ready_entry[`lsbSize-1:0];//can be ex
-    reg [5:0] pos_to_cclate_addr;
+    wire [5:0] pos_to_cclate_addr;
 
     reg [4:0] head, tail;
     reg if_empty;
@@ -61,14 +61,15 @@ module lsb (
             ready_entry[i] = (if_busy_entry[i] == `TRUE) && (Q2_entry[i] == `emptyTag) && (address_ready_entry[i] == `TRUE);
             to_cclate_addr_ready_entry[i] = (if_busy_entry[i] == `TRUE) && (Q1_entry[i] == `emptyTag) && (address_ready_entry[i] == `FALSE);
         end
-        for(i = 0; i < `lsbSize; i=i+1) begin
-            if (to_cclate_addr_ready_entry[i]) pos_to_cclate_addr = i;   
-        end
     end
 
+            integer lsb_file;
+            initial lsb_file = $fopen("lsb.txt");
 
     integer j;
     always @(posedge clk) begin
+                $fdisplay(lsb_file,$time);
+                for (i=1; i<16; i=i+1) $fdisplay(lsb_file," [LSB]if_busy : ",if_busy_entry[i]," ready : ",ready_entry[i]," op : ",op_entry[i]," addr : ",addr_entry[i]," V1 : ",V1_entry[i],"  ",i);
         if (rst || clear) begin
             status <= IDLE;
             if_empty <= `TRUE;
@@ -85,6 +86,7 @@ module lsb (
         end else if (rdy) begin
             //recive from decoder
             if (if_issue_lsb && if_idle) begin
+                if_busy_entry[tail] <= `TRUE;
                 dest_entry[tail] <= dest_lsb;
                 op_entry[tail] <= op_type_to_lsb;
                 V1_entry[tail] <= data_rs1_to_lsb;
@@ -109,6 +111,7 @@ module lsb (
                 end
             end
             //issue to ex
+            out_ioin <= `FALSE;
             wb_pos_in_rob <= `emptyTag;
             if_out_mem <= `FALSE;
             wb_addr <= `emptyAddr;
@@ -177,5 +180,21 @@ module lsb (
             end
         end
     end
+
+    assign pos_to_cclate_addr = to_cclate_addr_ready_entry[1] ? 1 : 
+                        to_cclate_addr_ready_entry[2] ? 2 : 
+                            to_cclate_addr_ready_entry[3] ? 3 :
+                                to_cclate_addr_ready_entry[4] ? 4 :
+                                    to_cclate_addr_ready_entry[5] ? 5 :
+                                        to_cclate_addr_ready_entry[6] ? 6 :
+                                            to_cclate_addr_ready_entry[7] ? 7 : 
+                                                to_cclate_addr_ready_entry[8] ? 8 : 
+                                                    to_cclate_addr_ready_entry[9] ? 9 :
+                                                        to_cclate_addr_ready_entry[10] ? 10 :
+                                                            to_cclate_addr_ready_entry[11] ? 11 :
+                                                                to_cclate_addr_ready_entry[12] ? 12 :
+                                                                    to_cclate_addr_ready_entry[13] ? 13 :
+                                                                        to_cclate_addr_ready_entry[14] ? 14 :
+                                                                            to_cclate_addr_ready_entry[15] ? 15 : 0;
 
 endmodule

@@ -217,12 +217,16 @@ module decoder(
             //get the information of rs1 and rs2
             tag_rs1 = tag_rs1_reg;
             if (tag_rs1 == `emptyTag) data_rs1 = data_rs1_reg;
-            else if (data_rs1_rob != `emptyData) data_rs1 = data_rs1_rob;
-            else data_rs1 = `emptyData;  
+            else if (data_rs1_rob != `emptyData) begin
+                data_rs1 = data_rs1_rob;
+                tag_rs1 = `emptyTag;
+            end else data_rs1 = `emptyData;  
             tag_rs2 = tag_rs2_reg;
             if (tag_rs2 == `emptyTag) data_rs2 = data_rs2_reg;
-            else if (data_rs2_rob != `emptyData) data_rs2 = data_rs2_rob;
-            else data_rs2 = `emptyData;
+            else if (data_rs2_rob != `emptyData) begin
+                data_rs2 = data_rs2_rob;
+                tag_rs2 = `emptyTag;
+            end else data_rs2 = `emptyData;
             //about shamt  data_rs2 := shamt
             if (op == 7'b0010011 && (funct3 == 3'b001 || funct3 == 3'b101)) begin
                 data_rs2 = rs2;
