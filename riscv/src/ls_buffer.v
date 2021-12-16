@@ -69,7 +69,7 @@ module lsb (
     integer j;
     always @(posedge clk) begin
                 $fdisplay(lsb_file,$time);
-                for (i=1; i<16; i=i+1) $fdisplay(lsb_file," [LSB]if_busy : ",if_busy_entry[i]," ready : ",ready_entry[i]," op : ",op_entry[i]," addr : ",addr_entry[i]," V1 : ",V1_entry[i],"  ",i);
+                for (i=1; i<16; i=i+1) $fdisplay(lsb_file," [LSB]if_busy : ",if_busy_entry[i]," ready : ",ready_entry[i]," op : ",op_entry[i]," addr : %h",addr_entry[i],"  ",i);
         if (rst || clear) begin
             status <= IDLE;
             if_empty <= `TRUE;

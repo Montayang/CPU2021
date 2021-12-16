@@ -7,7 +7,7 @@
 `define funct3Width   3
 `define opWidth       7
 `define regWidth      5
-`define opTypeWidth   5
+`define opTypeWidth   6
 
 `define regSize      32
 `define rsSize       16

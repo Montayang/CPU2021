@@ -93,7 +93,7 @@ module rob (
     integer k;
     always @(posedge clk) begin
                     $fdisplay(rob_file,$time);
-                    for (i=1; i<16; i=i+1) $fdisplay(rob_file," [ROB]busy: ",if_busy_entry[i]," ready: ",ready_entry[i]," op : ",op_entry[i]," addr : ",destination_entry[i]," value : %h",value_entry[i]," jump",new_pc_entry[i],"  ",i);                   
+                    for (i=1; i<16; i=i+1) $fdisplay(rob_file," [ROB]busy: ",if_busy_entry[i]," ready: ",ready_entry[i]," op : %h",op_entry[i]," addr : ",destination_entry[i]," value : %h",value_entry[i]," jump",new_pc_entry[i],"  ",i);                   
         if (rst || clear) begin
             status <= IDLE;
             if_empty <= `TRUE;
@@ -132,7 +132,7 @@ module rob (
                 destination_entry[tail] <= rd_decoder;
                 new_pc_entry[tail] <= `emptyAddr;
                 ready_entry[tail] <= `FALSE;
-                tail <= tail == `robSize ? 1 : tail+1;
+                tail <= tail == `robSize-1 ? 1 : tail+1;
                 if_empty <= `FALSE;
             end
             //renew data from ex and lsb and broadcast
@@ -182,8 +182,8 @@ module rob (
                                 count <= 0;
                                 if_jump <= `TRUE;
                                 pc_to_jump <= new_pc_entry[head];
-                                if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
-                                head <= (head == `lsbSize) ? 1:head+1;
+                                if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                                head <= (head == `robSize-1) ? 1:head+1;
                                 if_busy_entry[head] <= `FALSE;
                                 value_entry[head] <= `emptyData;
                              end
@@ -198,8 +198,8 @@ module rob (
                                     if_jump <= `TRUE;
                                     pc_to_jump <= new_pc_entry[head];
                                 end
-                                if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
-                                head <= (head == `lsbSize) ? 1:head+1;
+                                if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                                head <= (head == `robSize-1) ? 1:head+1;
                                 if_busy_entry[head] <= `FALSE;
                                 value_entry[head] <= `emptyData;
                             end
@@ -208,8 +208,8 @@ module rob (
                                 pos_commit <= destination_entry[head][4:0];
                                 data_commit <= value_entry[head];
                                 tag_commit <= head;
-                                if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
-                                head <= (head == `lsbSize) ? 1:head+1;
+                                if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                                head <= (head == `robSize-1) ? 1:head+1;
                                 if_busy_entry[head] <= `FALSE;
                                 value_entry[head] <= `emptyData;
                             end
@@ -219,16 +219,16 @@ module rob (
                     if (op_entry[head] == `SB || op_entry[head] == `SH || op_entry[head] == `SW) begin
                         if (if_stored == `TRUE) begin
                             status <= IDLE;
-                            if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
-                            head <= (head == `lsbSize) ? 1:head+1;
+                            if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                            head <= (head == `robSize-1) ? 1:head+1;
                             if_busy_entry[head] <= `FALSE;
                             value_entry[head] <= `emptyData;
                         end
                     end else begin
                         if (if_get_mem == `TRUE) begin
                             status <= IDLE;
-                            if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
-                            head <= (head == `lsbSize) ? 1:head+1;
+                            if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                            head <= (head == `robSize-1) ? 1:head+1;
                             if_busy_entry[head] <= `FALSE;
                             value_entry[head] <= `emptyData;
                         end

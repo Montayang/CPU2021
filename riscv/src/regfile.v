@@ -29,7 +29,7 @@ module regfile(
 
     integer i;
     always @(posedge clk) begin
-                        //for (i=15; i<16; i=i+1) $display($time," [REG]data: ",data[i]," tag : ",tag[i],"  ",i);
+                        //for (i=9; i<10; i=i+1) $display($time," [REG]data: ",data[i]," tag : ",tag[i],"  ",i);
         if (rst || clear) begin
             if (if_commit) begin
                 if (tag[pos_commit] == tag_commit) begin

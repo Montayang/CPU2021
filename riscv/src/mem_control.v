@@ -79,7 +79,7 @@ module mem_control (
                         status <= ROB;
                         if_rw <= 1;
                         addr_to_ram <= get_store_addr;
-                        data_to_ram <= get_store_data;
+                        data_to_ram <= get_store_data[7:0];
                     end else if (lsb_flag) begin
                         status <= LSB;
                         addr_to_ram <= get_load_addr;
@@ -139,14 +139,16 @@ module mem_control (
                     endcase
                 end
                 ROB : begin
-                    if (stages > get_store_size) begin
+                    if (stages > get_store_size - 1) begin
                         status <= IDLE;
                         stages <= 1;
                         rob_flag <= `FALSE;
                         if_stored <= `TRUE;
                     end else begin
                         if_rw <= 1;
-                        data_to_ram <= get_store_data;
+                        if (stages == 1) data_to_ram <= get_store_data[15:8];
+                        if (stages == 2) data_to_ram <= get_store_data[23:16];
+                        if (stages == 3) data_to_ram <= get_store_data[31:24];
                     end
                 end
                 IO_READ : begin
