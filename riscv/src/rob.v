@@ -93,7 +93,7 @@ module rob (
     integer k;
     always @(posedge clk) begin
                     $fdisplay(rob_file,$time);
-                    for (i=1; i<16; i=i+1) $fdisplay(rob_file," [ROB]busy: ",if_busy_entry[i]," ready: ",ready_entry[i]," op : %h",op_entry[i]," addr : ",destination_entry[i]," value : %h",value_entry[i]," jump",new_pc_entry[i],"  ",i);                   
+                    for (i=1; i<16; i=i+1) $fdisplay(rob_file," [ROB]busy: ",if_busy_entry[i]," ready: ",ready_entry[i]," op : %h",op_entry[i]," addr : %h",destination_entry[i]," value : %h",value_entry[i]," jump",new_pc_entry[i],"  ",i);                   
         if (rst || clear) begin
             status <= IDLE;
             if_empty <= `TRUE;

@@ -52,7 +52,7 @@ module lsb (
 
     reg [4:0] head, tail;
     reg if_empty;
-    assign if_idle = if_empty || ((head != tail) && !((tail+1 == head) || (tail == `lsbSize && head == 1)));
+    assign if_idle = if_empty || ((head != tail) && !((tail+1 == head) || (tail == `lsbSize-1 && head == 1)));
     assign cur_inst_addr = addr_entry[head];
 
     integer i;
@@ -78,6 +78,8 @@ module lsb (
             wb_addr <= `emptyAddr;
             wb_data <= `emptyData;
             wb_pos_in_rob <= `emptyTag;
+            if_out_mem <= `FALSE;
+            out_ioin <= `FALSE;
             for (j = 0;j < `lsbSize; j=j+1) begin
                 if_busy_entry[j] <= `FALSE;
                 address_ready_entry[j] <= `FALSE;
@@ -95,11 +97,11 @@ module lsb (
                 Q2_entry[tail] <= tag_rs2_to_lsb;
                 imm_entry[tail] <= imm_to_lsb;
                 if_empty <= `FALSE;
-                tail <= tail == `lsbSize ? 1 : tail+1;
+                tail <= tail == `lsbSize-1 ? 1 : tail+1;
             end
             //recive from rob
             if (tag_renew != `emptyTag) begin
-                for (i=0; i<`lsbSize; i=i+1) begin
+                for (i=1; i<`lsbSize; i=i+1) begin
                     if (Q1_entry[i] == tag_renew) begin
                         V1_entry[i] <= data_renew;
                         Q1_entry[i] <= `emptyTag;
@@ -125,8 +127,8 @@ module lsb (
                                 address_ready_entry[head] <= `FALSE;
                                 out_ioin <= `TRUE;
                                 wb_pos_in_rob <= dest_entry[head];
-                                if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
-                                head <= (head == `lsbSize) ? 1:head+1;
+                                if ((head+1 == tail) || (head == `lsbSize-1 && tail == 1)) if_empty <= `TRUE;
+                                head <= (head == `lsbSize-1) ? 1:head+1;
                             end else if (!if_addr_hzd && addr_entry[head] != wb_addr) begin
                                 status <= WAIT;
                                 if_out_mem <= `TRUE;
@@ -156,9 +158,10 @@ module lsb (
                             wb_addr <= addr_entry[head];
                             wb_data <= V2_entry[head];
                             if_busy_entry[head] <= `FALSE;
+                            address_ready_entry[head] <= `FALSE;
                             wb_pos_in_rob <= dest_entry[head];
-                            if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
-                            head <= (head == `lsbSize) ? 1:head+1;
+                            if ((head+1 == tail) || (head == `lsbSize-1 && tail == 1)) if_empty <= `TRUE;
+                            head <= (head == `lsbSize-1) ? 1:head+1;
                         end
                     endcase
                 end else begin
@@ -168,8 +171,8 @@ module lsb (
                         if_busy_entry[head] <= `FALSE;
                         address_ready_entry[head] <= `FALSE;
                         wb_pos_in_rob <= dest_entry[head];
-                        if ((head+1 == tail) || (head == `lsbSize && tail == 1)) if_empty <= `TRUE;
-                        head <= (head == `lsbSize) ? 1:head+1;
+                        if ((head+1 == tail) || (head == `lsbSize-1 && tail == 1)) if_empty <= `TRUE;
+                        head <= (head == `lsbSize-1) ? 1:head+1;
                     end
                 end
             end
