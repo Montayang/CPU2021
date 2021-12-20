@@ -43,8 +43,36 @@ module mem_control (
     reg rob_flag;
     reg io_flag;
 
+    //icache
+    reg [`addrWidth-1:0] index[`icacheSize-1:0];
+    reg [`instWidth-1:0]   tag[`icacheSize-1:0];
+    reg [7:0] position;
+    reg hit;
+
+    //write buffer
+    reg [`addrWidth-1:0] buffer_addr[`bufferSize-1:0];
+    reg [`dataWidth-1:0] buffer_data[`bufferSize-1:0];
+    reg [4:0]             write_size[`bufferSize-1:0];
+    reg [4:0] head, tail;
+    reg wb_if_empty;
+    wire wb_if_idle;
+    wire uart_full;
+    reg [1:0] wait_uart;
+    assign wb_if_idle = wb_if_empty || ((head != tail) && !((tail+1 == head) || (tail == `bufferSize-1 && head == 1)));
+    assign uart_full = (buffer_addr[head][17:16] == 2'b11) && (if_uart_full || uart_full);
+
+    integer i;
+    always @(*) begin
+        hit = `FALSE;
+        for (i=0; i<`icacheSize; i=i+1) 
+            if (if_get_pc && index[i]==pc_get && pc_get != `emptyAddr) hit = `TRUE;
+    end
+
     always @(posedge clk) begin
         if (rst || clear) begin
+            head <= 1;
+            tail <= 1;
+            wb_if_empty <= `TRUE;
             status <= IDLE;
             stages <= 1;
             if_out_inst_to_pc <= `FALSE;
@@ -57,15 +85,40 @@ module mem_control (
             lsb_flag <= `FALSE;
             rob_flag <= `FALSE;
             io_flag <= `FALSE;
+            hit <= `FALSE;
+            for (i=0; i<`icacheSize; i=i+1) begin
+                index[i] <= `emptyAddr;
+                tag[i] <= `emptyData;
+                position <= 0;
+            end
         end else if (rdy) begin
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
             if_out_to_lsb <= `FALSE;
             if_stored <= `FALSE;
             if_rw <= 0;
-            if (if_get_pc) pc_flag <= `TRUE;
+            if (if_get_pc) begin
+                if (!pc_flag && hit) begin
+                    for (i=0; i<`icacheSize; i=i+1) 
+                        if (if_get_pc && index[i]==pc_get) begin
+                            if_out_inst_to_pc <= `TRUE;
+                            inst_out_to_pc <= tag[i];
+                        end
+                end
+                else pc_flag <= `TRUE;
+            end
             if (if_get_lsb_to_load) lsb_flag <= `TRUE;
-            if (if_get_rob_to_store) rob_flag <= `TRUE;
+            if (if_get_rob_to_store || rob_flag) begin
+                if (wb_if_idle) begin
+                    wb_if_empty <= `FALSE;
+                    buffer_addr[tail] <= get_store_addr;
+                    buffer_data[tail] <= get_store_data;
+                    write_size[tail] <= get_store_size;
+                    if_stored <= `TRUE;
+                    tail <= tail == `bufferSize-1 ? 1 : tail+1;
+                    rob_flag <= `FALSE;
+                end else rob_flag <= `TRUE;
+            end
             if (if_get_io_to_load) io_flag <= `TRUE;
             addr_to_ram <= addr_to_ram + 1;
             stages <= stages + 1;
@@ -75,11 +128,11 @@ module mem_control (
                     if (io_flag) begin
                         status <= IO_READ;
                         addr_to_ram <= `IO_ADDR;
-                    end else if (rob_flag) begin
+                    end else if (!wb_if_empty) begin
                         status <= ROB;
                         if_rw <= 1;
-                        addr_to_ram <= get_store_addr;
-                        data_to_ram <= get_store_data[7:0];
+                        addr_to_ram <= buffer_addr[head];
+                        data_to_ram <= buffer_data[head][7:0];
                     end else if (lsb_flag) begin
                         status <= LSB;
                         addr_to_ram <= get_load_addr;
@@ -99,6 +152,9 @@ module mem_control (
                     end
                     if (stages == 6) begin
                         status <= IDLE;
+                        index[position] <= pc_get;
+                        tag[position] <= inst_out_to_pc;
+                        position <= position == `icacheSize-1 ? 0 : position + 1;
                     end
                 end
                 LSB : begin
@@ -139,16 +195,24 @@ module mem_control (
                     endcase
                 end
                 ROB : begin
-                    if (stages > get_store_size - 1) begin
-                        status <= IDLE;
+                    if (uart_full) begin
+                        addr_to_ram <= `emptyAddr;
                         stages <= 1;
-                        rob_flag <= `FALSE;
-                        if_stored <= `TRUE;
+                        data_to_ram <= 0;
                     end else begin
-                        if_rw <= 1;
-                        if (stages == 1) data_to_ram <= get_store_data[15:8];
-                        if (stages == 2) data_to_ram <= get_store_data[23:16];
-                        if (stages == 3) data_to_ram <= get_store_data[31:24];
+                        if (stages > write_size[head] - 1) begin
+                            if ((head+1 == tail) || (head == `bufferSize-1 && tail == 1)) wb_if_empty <= `TRUE;
+                            head <= (head == `bufferSize-1) ? 1:head+1;
+                            status <= IDLE;
+                            stages <= 1;
+                            rob_flag <= `FALSE;
+                            if_stored <= `TRUE;
+                        end else begin
+                            if_rw <= 1;
+                            if (stages == 1) data_to_ram <= buffer_data[head][15:8];
+                            if (stages == 2) data_to_ram <= buffer_data[head][23:16];
+                            if (stages == 3) data_to_ram <= buffer_data[head][31:24];
+                        end
                     end
                 end
                 IO_READ : begin

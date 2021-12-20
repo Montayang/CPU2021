@@ -13,6 +13,8 @@
 `define rsSize       16
 `define lsbSize      16
 `define robSize      16
+`define icacheSize  128
+`define bufferSize    8
 
 `define funct7Range  31:25
 `define funct3Range  14:12

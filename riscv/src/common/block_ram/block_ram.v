@@ -91,7 +91,7 @@ initial begin
     ram[i] = 0;
   end
 
-  $readmemh("/mnt/f/Programming/CPU2021-main/riscv/test/test1.data", ram); // add test.data to vivado project or specify a valid file path
+  $readmemh("/mnt/f/Programming/CPU2021-main/riscv/test/test2.data", ram); // add test.data to vivado project or specify a valid file path
 end
 
 endmodule
