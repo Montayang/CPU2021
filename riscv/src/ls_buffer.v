@@ -39,7 +39,7 @@ module lsb (
     reg               if_busy_entry[`lsbSize-1:0];
     reg [`tagWidth-1:0]  dest_entry[`lsbSize-1:0];
     reg [`opTypeWidth-1:0] op_entry[`lsbSize-1:0];
-    reg [`addrWidth-1:0] addr_entry[`lsbSize-1:0];//for S-type
+    reg [`addrWidth-1:0] addr_entry[`lsbSize-1:0];
     reg [`dataWidth-1:0]   V1_entry[`lsbSize-1:0];
     reg [`dataWidth-1:0]   V2_entry[`lsbSize-1:0];
     reg [`tagWidth-1:0]    Q1_entry[`lsbSize-1:0];
@@ -63,13 +63,13 @@ module lsb (
         end
     end
 
-            integer lsb_file;
-            initial lsb_file = $fopen("lsb.txt");
+            //integer lsb_file;
+            //initial lsb_file = $fopen("lsb1.txt");
 
     integer j;
     always @(posedge clk) begin
-                $fdisplay(lsb_file,$time);
-                for (i=1; i<16; i=i+1) $fdisplay(lsb_file," [LSB]if_busy : ",if_busy_entry[i]," ready : ",ready_entry[i]," op : ",op_entry[i]," addr : %h",addr_entry[i],"  ",i);
+                //$fdisplay(lsb_file,$time);
+                //for (i=1; i<16; i=i+1) $fdisplay(lsb_file," [LSB]if_busy : ",if_busy_entry[i]," ready : ",ready_entry[i]," op : ",op_entry[i]," addr : %h",addr_entry[i]," V1 : %h",V1_entry[i]," Q1 : %h",Q1_entry[i]," V2 : %h",V2_entry[i]," Q2 : %h",Q2_entry[i]," imm : %h",imm_entry[i],"  ",i);
         if (rst || clear) begin
             status <= IDLE;
             if_empty <= `TRUE;
@@ -91,10 +91,20 @@ module lsb (
                 if_busy_entry[tail] <= `TRUE;
                 dest_entry[tail] <= dest_lsb;
                 op_entry[tail] <= op_type_to_lsb;
-                V1_entry[tail] <= data_rs1_to_lsb;
-                V2_entry[tail] <= data_rs2_to_lsb;
-                Q1_entry[tail] <= tag_rs1_to_lsb;
-                Q2_entry[tail] <= tag_rs2_to_lsb;
+                if (tag_renew != `emptyTag && tag_rs1_to_lsb == tag_renew) begin
+                    V1_entry[tail] <= data_renew;
+                    Q1_entry[tail] <= `emptyTag;
+                end else begin
+                    V1_entry[tail] <= data_rs1_to_lsb;
+                    Q1_entry[tail] <= tag_rs1_to_lsb;
+                end
+                if (tag_renew != `emptyTag && tag_rs2_to_lsb == tag_renew) begin
+                    V2_entry[tail] <= data_renew;
+                    Q2_entry[tail] <= `emptyTag;
+                end else begin
+                    V2_entry[tail] <= data_rs2_to_lsb;
+                    Q2_entry[tail] <= tag_rs2_to_lsb;
+                end
                 imm_entry[tail] <= imm_to_lsb;
                 if_empty <= `FALSE;
                 tail <= tail == `lsbSize-1 ? 1 : tail+1;

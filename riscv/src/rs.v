@@ -46,12 +46,12 @@ module rs (
     assign if_idle = pos_for_newInst != 0;
 
             integer rs_file;
-            initial rs_file = $fopen("rs.txt");
+            initial rs_file = $fopen("rs1.txt");
 
     integer i;
     always @(posedge clk) begin
-                        $fdisplay(rs_file,$time);
-                        for (i=1; i<16; i=i+1) $fdisplay(rs_file," [RS]if_busy : ",if_busy_entry[i]," pc : %h",pc_entry[i]," ready : ",ready_entry[i]," Q1 : ",Q1_entry[i],"  ",i);
+                        //$fdisplay(rs_file,$time);
+                        //for (i=1; i<16; i=i+1) $fdisplay(rs_file," [RS]if_busy : ",if_busy_entry[i]," pc : %h",pc_entry[i]," ready : ",ready_entry[i]," Q1 : ",Q1_entry[i],"  ",i);
         if (rst || clear) begin
             op_type_to_ex <= `emptyOp;
             data_rs1_to_ex <= `emptyData;
@@ -71,10 +71,20 @@ module rs (
                 if_busy_entry[pos_for_newInst] <= `TRUE;
                 dest_entry[pos_for_newInst] <= dest_rs;
                 op_entry[pos_for_newInst] <= op_type_to_rs;
-                V1_entry[pos_for_newInst] <= data_rs1_to_rs;
-                V2_entry[pos_for_newInst] <= data_rs2_to_rs;
-                Q1_entry[pos_for_newInst] <= tag_rs1_to_rs;
-                Q2_entry[pos_for_newInst] <= tag_rs2_to_rs;
+                if (tag_renew != `emptyTag && tag_rs1_to_rs == tag_renew) begin
+                    V1_entry[pos_for_newInst] <= data_renew;
+                    Q1_entry[pos_for_newInst] <= `emptyTag;
+                end else begin
+                    V1_entry[pos_for_newInst] <= data_rs1_to_rs;
+                    Q1_entry[pos_for_newInst] <= tag_rs1_to_rs;
+                end
+                if (tag_renew != `emptyTag && tag_rs2_to_rs == tag_renew) begin
+                    V2_entry[pos_for_newInst] <= data_renew;
+                    Q2_entry[pos_for_newInst] <= `emptyTag;
+                end else begin
+                    V2_entry[pos_for_newInst] <= data_rs2_to_rs;
+                    Q2_entry[pos_for_newInst] <= tag_rs2_to_rs;
+                end
                 imm_entry[pos_for_newInst] <= imm_to_rs;
                 pc_entry[pos_for_newInst] <= pc_to_rs;
             end
@@ -104,22 +114,6 @@ module rs (
         end
     end
         
-    // always @(*) begin
-    //     busy_entry = `rsSize - 1;
-    //     for (i=`rsSize; i>0; i=i-1) begin
-    //         if(!if_busy_entry[i]) begin
-    //             pos_for_newInst = i;
-    //             busy_entry = busy_entry - 1;
-    //         end
-    //     end
-    //     for (i=1; i<`rsSize; i=i+1) begin
-    //         if (if_busy_entry[i] && Q1_entry[i] == `emptyTag && Q1_entry[i] == `emptyTag) ready_entry[i] =`TRUE;
-    //         else ready_entry[i] =`FALSE;
-    //     end
-    //     for (i=`rsSize; i>0; i=i-1) begin
-    //         if (ready_entry[i]) pos_to_ex = i;
-    //     end
-    // end
     assign pos_for_newInst = ~if_busy_entry[1] ? 1 :
                         ~if_busy_entry[2] ? 2 : 
                             ~if_busy_entry[3] ? 3 :

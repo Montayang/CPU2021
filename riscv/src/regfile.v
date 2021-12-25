@@ -29,24 +29,23 @@ module regfile(
 
     integer i;
     always @(posedge clk) begin
-                        //for (i=2; i<3; i=i+1) $display($time," [REG]data: %h",data[i]," tag : ",tag[i],"  ",i);
+                            // if (if_commit) begin
+                            // $write($time,"reg:");
+                            // for (i=0; i<32; i=i+1) $write("%h ", data[i]);
+                            // $display();  end
         if (rst || clear) begin
-            if (if_commit) begin
-                if (tag[pos_commit] == tag_commit) begin
-                    tag[pos_commit] <= `emptyTag;
-                    data[pos_commit] <= data_commit;
-                end
+            if (if_commit && pos_commit != `emptyReg) begin
+                if (tag_commit == tag[pos_commit]) tag[pos_commit] <= `emptyTag;
+                data[pos_commit] <= data_commit;
             end
             for (i = 0; i < `regSize; i = i + 1) begin
                 if (!clear) data[i] <= 0;
                 tag[i] <= `emptyTag;
             end
         end else if (rdy) begin
-            if (if_commit) begin
-                if (tag[pos_commit] == tag_commit) begin
-                    tag[pos_commit] <= `emptyTag;
-                    data[pos_commit] <= data_commit;
-                end
+            if (if_commit && pos_commit != `emptyReg) begin
+                if (tag_commit == tag[pos_commit]) tag[pos_commit] <= `emptyTag;
+                data[pos_commit] <= data_commit;
             end
             //to rename the reg
             if (reg_to_rename != `emptyReg) begin

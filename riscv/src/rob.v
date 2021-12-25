@@ -72,12 +72,12 @@ module rob (
     reg [2:0] count;
 
     //decoder wants to get the opration value
-    assign data_rs1_to_decoder = ready_entry[tag_rs1_decoder] ? value_entry[tag_rs1_decoder] : `emptyData;
-    assign data_rs2_to_decoder = ready_entry[tag_rs2_decoder] ? value_entry[tag_rs2_decoder] : `emptyData;
+    assign data_rs1_to_decoder = value_entry[tag_rs1_decoder] ? value_entry[tag_rs1_decoder] : `emptyData;
+    assign data_rs2_to_decoder = value_entry[tag_rs2_decoder] ? value_entry[tag_rs2_decoder] : `emptyData;
     assign tag_to_decoder = if_idle ? tail : `emptyTag;
 
-            integer rob_file;
-            initial rob_file = $fopen("rob.txt");
+            //integer rob_file;
+            //initial rob_file = $fopen("rob1.txt");
 
     reg j;
     integer i;
@@ -86,14 +86,14 @@ module rob (
         for (i=1; i<`robSize; i=i+1) begin
             if ((op_entry[i] == `SB || op_entry[i] == `SH || op_entry[i] == `SW) && cur_inst_addr_lsb == destination_entry[i] && value_entry[i] != `emptyData) j = `TRUE; 
         end
-        if (j) if_addr_hzd_to_lsb = `TRUE;
+        if (j || (cur_inst_addr_lsb == wb_addr_lsb)) if_addr_hzd_to_lsb = `TRUE;
         else if_addr_hzd_to_lsb = `FALSE;
     end
 
     integer k;
     always @(posedge clk) begin
-                    $fdisplay(rob_file,$time);
-                    for (i=1; i<16; i=i+1) $fdisplay(rob_file," [ROB]busy: ",if_busy_entry[i]," ready: ",ready_entry[i]," op : %h",op_entry[i]," addr : %h",destination_entry[i]," value : %h",value_entry[i]," jump",new_pc_entry[i],"  ",i);                   
+                    //$fdisplay(rob_file,$time);
+                    //for (i=1; i<16; i=i+1) $fdisplay(rob_file," [ROB]busy: ",if_busy_entry[i]," ready: ",ready_entry[i]," op : %h",op_entry[i]," addr : %h",destination_entry[i]," value : %h",value_entry[i]," jump",new_pc_entry[i],"  ",i);                   
         if (rst || clear) begin
             status <= IDLE;
             if_empty <= `TRUE;
@@ -117,6 +117,7 @@ module rob (
             for (k = 0;k < `robSize; k=k+1) begin
                 ready_entry[k] <= `FALSE;
                 if_busy_entry[k] <= `FALSE;
+                value_entry[k] <= `emptyData;
             end
         end else if (rdy) begin
             tag_renew_to_lsb <= `emptyTag;
@@ -132,11 +133,12 @@ module rob (
                 destination_entry[tail] <= rd_decoder;
                 new_pc_entry[tail] <= `emptyAddr;
                 ready_entry[tail] <= `FALSE;
+                value_entry[tail] <= `emptyData;
                 tail <= tail == `robSize-1 ? 1 : tail+1;
                 if_empty <= `FALSE;
             end
             //renew data from ex and lsb and broadcast
-            if (wb_pos_ex != `emptyTag) begin
+            if (wb_pos_ex != `emptyTag && if_busy_entry[wb_pos_ex]) begin
                 value_entry[wb_pos_ex] <= wb_data_ex;
                 new_pc_entry[wb_pos_ex] <= pc_to_jump_ex;
                 ready_entry[wb_pos_ex] <= `TRUE;
@@ -145,7 +147,7 @@ module rob (
                 tag_renew_to_lsb <= wb_pos_ex;
                 data_renew_to_lsb <= wb_data_ex;
             end
-            if (wb_pos_lsb != `emptyTag) begin
+            if (wb_pos_lsb != `emptyTag && if_busy_entry[wb_pos_lsb]) begin
                 value_entry[wb_pos_lsb] <= wb_data_lsb;
                 ready_entry[wb_pos_lsb] <= in_ioin ? `FALSE : `TRUE;
                 if_IO[wb_pos_lsb] <= in_ioin ? `TRUE : `FALSE;
@@ -156,7 +158,7 @@ module rob (
                 data_renew_to_lsb <= wb_data_lsb;
             end
             //commit
-            if (if_busy_entry[head] && ready_entry[head]) begin
+            if (!if_empty && ready_entry[head]) begin
                 if (status == IDLE) begin
                     if (op_entry[head] != `emptyOp) begin
                         case (op_entry[head])
@@ -182,10 +184,9 @@ module rob (
                                 count <= 0;
                                 if_jump <= `TRUE;
                                 pc_to_jump <= new_pc_entry[head];
-                                if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                                if (((head+1 == tail) || (head == `robSize-1 && tail == 1)) && !op_decoder) if_empty <= `TRUE;
                                 head <= (head == `robSize-1) ? 1:head+1;
                                 if_busy_entry[head] <= `FALSE;
-                                value_entry[head] <= `emptyData;
                              end
                             `BEQ,`BNE,`BLT,`BGE,`BLTU,`BGEU : begin
                                 if (new_pc_entry[head] != `emptyAddr) begin
@@ -198,20 +199,18 @@ module rob (
                                     if_jump <= `TRUE;
                                     pc_to_jump <= new_pc_entry[head];
                                 end
-                                if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                                if (((head+1 == tail) || (head == `robSize-1 && tail == 1)) && !op_decoder) if_empty <= `TRUE;
                                 head <= (head == `robSize-1) ? 1:head+1;
                                 if_busy_entry[head] <= `FALSE;
-                                value_entry[head] <= `emptyData;
                             end
                             default : begin
                                 if_commit <= `TRUE;
                                 pos_commit <= destination_entry[head][4:0];
                                 data_commit <= value_entry[head];
                                 tag_commit <= head;
-                                if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                                if (((head+1 == tail) || (head == `robSize-1 && tail == 1)) && !op_decoder) if_empty <= `TRUE;
                                 head <= (head == `robSize-1) ? 1:head+1;
                                 if_busy_entry[head] <= `FALSE;
-                                value_entry[head] <= `emptyData;
                             end
                         endcase
                     end
@@ -219,18 +218,16 @@ module rob (
                     if (op_entry[head] == `SB || op_entry[head] == `SH || op_entry[head] == `SW) begin
                         if (if_stored == `TRUE) begin
                             status <= IDLE;
-                            if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                            if (((head+1 == tail) || (head == `robSize-1 && tail == 1)) && !op_decoder) if_empty <= `TRUE;
                             head <= (head == `robSize-1) ? 1:head+1;
                             if_busy_entry[head] <= `FALSE;
-                            value_entry[head] <= `emptyData;
                         end
                     end else begin
                         if (if_get_mem == `TRUE) begin
                             status <= IDLE;
-                            if ((head+1 == tail) || (head == `robSize-1 && tail == 1)) if_empty <= `TRUE;
+                            if (((head+1 == tail) || (head == `robSize-1 && tail == 1)) && !op_decoder) if_empty <= `TRUE;
                             head <= (head == `robSize-1) ? 1:head+1;
                             if_busy_entry[head] <= `FALSE;
-                            value_entry[head] <= `emptyData;
                         end
                     end
                 end

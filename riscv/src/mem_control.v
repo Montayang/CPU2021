@@ -59,7 +59,7 @@ module mem_control (
     wire uart_full;
     reg [1:0] wait_uart;
     assign wb_if_idle = wb_if_empty || ((head != tail) && !((tail+1 == head) || (tail == `bufferSize-1 && head == 1)));
-    assign uart_full = (buffer_addr[head][17:16] == 2'b11) && (if_uart_full || uart_full);
+    assign uart_full = (buffer_addr[head][17:16] == 2'b11) && (if_uart_full || wait_uart != 0);
 
     integer i;
     always @(*) begin
@@ -70,11 +70,23 @@ module mem_control (
 
     always @(posedge clk) begin
         if (rst || clear) begin
-            head <= 1;
-            tail <= 1;
-            wb_if_empty <= `TRUE;
-            status <= IDLE;
-            stages <= 1;
+            if (rst) begin
+                status <= IDLE;
+                stages <= 1;
+                wait_uart <= 0;
+                head <= 1;
+                tail <= 1;
+                wb_if_empty <= `TRUE;
+                rob_flag <= `FALSE;
+                for (i=0; i<`icacheSize; i=i+1) begin
+                    index[i] <= `emptyAddr;
+                    tag[i] <= `emptyData;
+                    position <= 0;
+                end
+            end else if (status != ROB) begin
+                status <= IDLE;
+                stages <= 1;
+            end
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
             if_out_to_lsb <= `FALSE;
@@ -83,15 +95,9 @@ module mem_control (
             data_to_ram <= `emptyData;
             pc_flag <= `FALSE;
             lsb_flag <= `FALSE;
-            rob_flag <= `FALSE;
             io_flag <= `FALSE;
-            hit <= `FALSE;
-            for (i=0; i<`icacheSize; i=i+1) begin
-                index[i] <= `emptyAddr;
-                tag[i] <= `emptyData;
-                position <= 0;
-            end
         end else if (rdy) begin
+            wait_uart <= wait_uart - ((wait_uart == 0) ? 0 : 1);
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
             if_out_to_lsb <= `FALSE;
@@ -201,12 +207,15 @@ module mem_control (
                         data_to_ram <= 0;
                     end else begin
                         if (stages > write_size[head] - 1) begin
-                            if ((head+1 == tail) || (head == `bufferSize-1 && tail == 1)) wb_if_empty <= `TRUE;
+                            if (((head+1 == tail) || (head == `bufferSize-1 && tail == 1)) && !if_get_rob_to_store) wb_if_empty <= `TRUE;
                             head <= (head == `bufferSize-1) ? 1:head+1;
+                            if (buffer_addr[head] == `IO_ADDR) wait_uart <= 2;
                             status <= IDLE;
                             stages <= 1;
                             rob_flag <= `FALSE;
                             if_stored <= `TRUE;
+                            addr_to_ram <= `emptyAddr;
+                            data_to_ram <= `emptyData;
                         end else begin
                             if_rw <= 1;
                             if (stages == 1) data_to_ram <= buffer_data[head][15:8];

@@ -18,7 +18,7 @@ riscv_top #(.SIM(1)) top(
 );
 
 initial begin
-  $dumpfile("/mnt/f/Programming/CPU2021-main/riscv/test/test2.vcd");
+  $dumpfile("/mnt/f/Programming/CPU2021-main/riscv/test/test3.vcd");
   $dumpvars();
   clk=0;
   rst=1;
