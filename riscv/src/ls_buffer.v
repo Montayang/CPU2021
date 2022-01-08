@@ -137,6 +137,7 @@ module lsb (
                                 address_ready_entry[head] <= `FALSE;
                                 out_ioin <= `TRUE;
                                 wb_pos_in_rob <= dest_entry[head];
+                                wb_data <= `emptyData;
                                 if ((head+1 == tail) || (head == `lsbSize-1 && tail == 1)) if_empty <= `TRUE;
                                 head <= (head == `lsbSize-1) ? 1:head+1;
                             end else if (!if_addr_hzd && addr_entry[head] != wb_addr) begin

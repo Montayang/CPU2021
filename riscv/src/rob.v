@@ -118,6 +118,7 @@ module rob (
                 ready_entry[k] <= `FALSE;
                 if_busy_entry[k] <= `FALSE;
                 value_entry[k] <= `emptyData;
+                if_IO[k] <= `FALSE;
             end
         end else if (rdy) begin
             tag_renew_to_lsb <= `emptyTag;
@@ -148,14 +149,19 @@ module rob (
                 data_renew_to_lsb <= wb_data_ex;
             end
             if (wb_pos_lsb != `emptyTag && if_busy_entry[wb_pos_lsb]) begin
-                value_entry[wb_pos_lsb] <= wb_data_lsb;
-                ready_entry[wb_pos_lsb] <= in_ioin ? `FALSE : `TRUE;
-                if_IO[wb_pos_lsb] <= in_ioin ? `TRUE : `FALSE;
-                if (op_entry[wb_pos_lsb] == `SB || op_entry[wb_pos_lsb] == `SH || op_entry[wb_pos_lsb] == `SW) destination_entry[wb_pos_lsb] <= wb_addr_lsb;
-                tag_renew_to_rs <= wb_pos_lsb;
-                data_renew_to_rs <= wb_data_lsb;
-                tag_renew_to_lsb <= wb_pos_lsb;
-                data_renew_to_lsb <= wb_data_lsb;
+                if (in_ioin) begin
+                    ready_entry[wb_pos_lsb] <= `FALSE;
+                    if_IO[wb_pos_lsb] <= `TRUE;
+                end else begin
+                    value_entry[wb_pos_lsb] <= wb_data_lsb;
+                    ready_entry[wb_pos_lsb] <= `TRUE;
+                    if_IO[wb_pos_lsb] <= `FALSE;
+                    if (op_entry[wb_pos_lsb] == `SB || op_entry[wb_pos_lsb] == `SH || op_entry[wb_pos_lsb] == `SW) destination_entry[wb_pos_lsb] <= wb_addr_lsb;
+                    tag_renew_to_rs <= wb_pos_lsb;
+                    data_renew_to_rs <= wb_data_lsb;
+                    tag_renew_to_lsb <= wb_pos_lsb;
+                    data_renew_to_lsb <= wb_data_lsb;
+                end
             end
             //commit
             if (!if_empty && ready_entry[head]) begin
@@ -231,17 +237,21 @@ module rob (
                         end
                     end
                 end
-            end else if (if_IO[head]) begin
+            end else if (!if_empty && if_IO[head]) begin
                 //address is `IO_ADDR
                 if (status == IDLE) begin
                     status <= WAIT;
                     if_out_mem_io <= `TRUE;
                 end else begin
-                    status <= IDLE;
                     if (if_get_mem) begin
+                        status <= IDLE;
                         value_entry[head] <= data_mem;
                         if_IO[head] <= `FALSE;
                         ready_entry[head] <= `TRUE;
+                        tag_renew_to_rs <= head;
+                        data_renew_to_rs <= data_mem;
+                        tag_renew_to_lsb <= head;
+                        data_renew_to_lsb <= data_mem;
                     end
                 end
             end

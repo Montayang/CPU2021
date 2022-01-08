@@ -56,10 +56,10 @@ module mem_control (
     reg [4:0] head, tail;
     reg wb_if_empty;
     wire wb_if_idle;
-    wire uart_full;
+    wire disable_to_write;
     reg [1:0] wait_uart;
     assign wb_if_idle = wb_if_empty || ((head != tail) && !((tail+1 == head) || (tail == `bufferSize-1 && head == 1)));
-    assign uart_full = (buffer_addr[head][17:16] == 2'b11) && (if_uart_full || wait_uart != 0);
+    assign disable_to_write = (buffer_addr[head][17:16] == 2'b11) && (if_uart_full || wait_uart != 0);
 
     integer i;
     always @(*) begin
@@ -69,34 +69,37 @@ module mem_control (
     end
 
     always @(posedge clk) begin
-        if (rst || clear) begin
-            if (rst) begin
-                status <= IDLE;
-                stages <= 1;
-                wait_uart <= 0;
-                head <= 1;
-                tail <= 1;
-                wb_if_empty <= `TRUE;
-                rob_flag <= `FALSE;
-                for (i=0; i<`icacheSize; i=i+1) begin
-                    index[i] <= `emptyAddr;
-                    tag[i] <= `emptyData;
-                    position <= 0;
-                end
-            end else if (status != ROB) begin
-                status <= IDLE;
-                stages <= 1;
+        if (rst) begin
+            data_to_ram <= `emptyData;
+            addr_to_ram <= `emptyAddr;
+            if_rw <= `FALSE;
+            status <= IDLE;
+            stages <= 1;
+            wait_uart <= 0;
+            head <= 1;
+            tail <= 1;
+            wb_if_empty <= `TRUE;
+            rob_flag <= `FALSE;
+            for (i=0; i<`icacheSize; i=i+1) begin
+                index[i] <= `emptyAddr;
+                tag[i] <= `emptyData;
+                position <= 0;
             end
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
             if_out_to_lsb <= `FALSE;
-            if_rw <= `FALSE;
-            addr_to_ram <= `emptyAddr;
-            data_to_ram <= `emptyData;
             pc_flag <= `FALSE;
             lsb_flag <= `FALSE;
             io_flag <= `FALSE;
-        end else if (rdy) begin
+        end else if (rdy && (!clear || status == ROB)) begin
+            if (clear) begin
+                if_out_inst_to_pc <= `FALSE;
+                if_out_io_to_rob <= `FALSE;
+                if_out_to_lsb <= `FALSE;
+                pc_flag <= `FALSE;
+                lsb_flag <= `FALSE;
+                io_flag <= `FALSE;
+            end
             wait_uart <= wait_uart - ((wait_uart == 0) ? 0 : 1);
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
@@ -136,9 +139,7 @@ module mem_control (
                         addr_to_ram <= `IO_ADDR;
                     end else if (!wb_if_empty) begin
                         status <= ROB;
-                        if_rw <= 1;
-                        addr_to_ram <= buffer_addr[head];
-                        data_to_ram <= buffer_data[head][7:0];
+                        addr_to_ram <= `emptyAddr;
                     end else if (lsb_flag) begin
                         status <= LSB;
                         addr_to_ram <= get_load_addr;
@@ -157,7 +158,14 @@ module mem_control (
                         pc_flag <= `FALSE;
                     end
                     if (stages == 6) begin
-                        status <= IDLE;
+                        stages <= 1;
+                        if(!wb_if_empty) begin 
+                            status <= ROB;
+                            addr_to_ram <= `emptyAddr;
+                        end else if(lsb_flag == `TRUE) begin 
+                            status <= LSB;
+                            addr_to_ram <= get_load_addr; 
+                        end else begin status <= IDLE; end
                         index[position] <= pc_get;
                         tag[position] <= inst_out_to_pc;
                         position <= position == `icacheSize-1 ? 0 : position + 1;
@@ -170,9 +178,15 @@ module mem_control (
                                 if (if_load_signed) data_out_to_lsb <= $signed(get_data_ram);
                                 else data_out_to_lsb <= get_data_ram;
                                 if_out_to_lsb <= `TRUE;
-                                status <= IDLE;
                                 stages <= 1;
                                 lsb_flag <= `FALSE;
+                                if(!wb_if_empty) begin 
+                                    status <= ROB;
+                                    addr_to_ram <= `emptyAddr;
+                                end else if(pc_flag == `TRUE) begin 
+                                    status <= PC;
+                                    addr_to_ram <= pc_get; 
+                                end else begin status <= IDLE; end
                             end
                         end
                         2 : begin
@@ -181,9 +195,15 @@ module mem_control (
                                 if (if_load_signed) data_out_to_lsb <= $signed({get_data_ram, data_out_to_lsb[7:0]});
                                 else data_out_to_lsb <= {get_data_ram, data_out_to_lsb[7:0]};
                                 if_out_to_lsb <= `TRUE;
-                                status <= IDLE;
                                 stages <= 1;
                                 lsb_flag <= `FALSE;
+                                if(!wb_if_empty) begin 
+                                    status <= ROB;
+                                    addr_to_ram <= `emptyAddr;
+                                end else if(pc_flag == `TRUE) begin 
+                                    status <= PC;
+                                    addr_to_ram <= pc_get; 
+                                end else begin status <= IDLE; end
                             end
                         end
                         4 : begin
@@ -193,34 +213,44 @@ module mem_control (
                             if (stages == 5) begin
                                 data_out_to_lsb[31:24] <= get_data_ram;
                                 if_out_to_lsb <= `TRUE;
-                                status <= IDLE;
                                 stages <= 1;
                                 lsb_flag <= `FALSE;
+                                if(!wb_if_empty) begin 
+                                    status <= ROB;
+                                    addr_to_ram <= `emptyAddr;
+                                end else if(pc_flag == `TRUE) begin 
+                                    status <= PC;
+                                    addr_to_ram <= pc_get; 
+                                end else begin status <= IDLE; end
                             end
                         end
                     endcase
                 end
                 ROB : begin
-                    if (uart_full) begin
-                        addr_to_ram <= `emptyAddr;
+                    if (disable_to_write) begin
                         stages <= 1;
-                        data_to_ram <= 0;
+                        data_to_ram <= `emptyData;
+                        addr_to_ram <= `emptyAddr;
                     end else begin
-                        if (stages > write_size[head] - 1) begin
-                            if (((head+1 == tail) || (head == `bufferSize-1 && tail == 1)) && !if_get_rob_to_store) wb_if_empty <= `TRUE;
+                        if_rw <= 1;
+                        if (stages == 0) data_to_ram <= `emptyData;
+                        if (stages == 1) begin
+                            addr_to_ram <= buffer_addr[head];
+                            data_to_ram <= buffer_data[head][7:0];
+                        end
+                        if (stages == 2) data_to_ram <= buffer_data[head][15:8];
+                        if (stages == 3) data_to_ram <= buffer_data[head][23:16];
+                        if (stages == 4) data_to_ram <= buffer_data[head][31:24];
+                        if (stages == write_size[head]) begin
                             head <= (head == `bufferSize-1) ? 1:head+1;
-                            if (buffer_addr[head] == `IO_ADDR) wait_uart <= 2;
-                            status <= IDLE;
+                            if (((head+1 == tail) || (head == `bufferSize-1 && tail == 1)) && !if_get_rob_to_store) begin
+                                wb_if_empty <= `TRUE;
+                                status <= IDLE;
+                            end else begin 
+                                status <= ROB;
+                                if (buffer_addr[head] == `IO_ADDR) wait_uart <= 2;
+                            end
                             stages <= 1;
-                            rob_flag <= `FALSE;
-                            if_stored <= `TRUE;
-                            addr_to_ram <= `emptyAddr;
-                            data_to_ram <= `emptyData;
-                        end else begin
-                            if_rw <= 1;
-                            if (stages == 1) data_to_ram <= buffer_data[head][15:8];
-                            if (stages == 2) data_to_ram <= buffer_data[head][23:16];
-                            if (stages == 3) data_to_ram <= buffer_data[head][31:24];
                         end
                     end
                 end
@@ -235,6 +265,18 @@ module mem_control (
                     end
                 end
             endcase
+        end else if (rdy && clear) begin
+            if_out_inst_to_pc <= `FALSE;
+            if_out_io_to_rob <= `FALSE;
+            if_out_to_lsb <= `FALSE;
+            pc_flag <= `FALSE;
+            lsb_flag <= `FALSE;
+            io_flag <= `FALSE;
+            status <= IDLE;
+            stages <= 1;
+            if_rw <= 0;
+            addr_to_ram <= `emptyAddr;
+            if (!wb_if_empty) stages <= ROB;
         end
     end
     
