@@ -88,7 +88,7 @@ module rob (
         end
         if (j || (cur_inst_addr_lsb == wb_addr_lsb)) if_addr_hzd_to_lsb = `TRUE;
         else if_addr_hzd_to_lsb = `FALSE;
-    end
+    end 
 
     integer k;
     always @(posedge clk) begin

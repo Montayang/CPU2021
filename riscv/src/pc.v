@@ -67,7 +67,7 @@ module pc (
                         status <= IDLE;
                     end
                 end
-            end
+            end 
         end
     end
 endmodule

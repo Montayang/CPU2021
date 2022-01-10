@@ -268,7 +268,7 @@ module mem_control (
         end else if (rdy && clear) begin
             if_out_inst_to_pc <= `FALSE;
             if_out_io_to_rob <= `FALSE;
-            if_out_to_lsb <= `FALSE;
+            if_out_to_lsb <= `FALSE; 
             pc_flag <= `FALSE;
             lsb_flag <= `FALSE;
             io_flag <= `FALSE;

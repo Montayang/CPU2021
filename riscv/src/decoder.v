@@ -2,7 +2,7 @@
 
 `include "/mnt/f/Programming/CPU2021-main/riscv/src/defines.v"
 
-module decoder(
+module decoder( 
     //ports with pc
     input wire if_get_inst,
     output reg if_station_idle, 

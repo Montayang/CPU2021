@@ -254,7 +254,7 @@ always @*
             $write("%c", io_din);
           end
           3'h04: begin      // 0x30004 write: indicates program stop
-            if (!tx_full) begin
+            if (!tx_full) begin 
               d_tx_data = 8'h00;
               d_wr_en = 1'b1;
             end

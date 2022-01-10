@@ -1,7 +1,7 @@
 // RISCV32I CPU top module
 // port modification allowed for debugging purposes
 `include "/mnt/f/Programming/CPU2021-main/riscv/src/defines.v"
-`include "/mnt/f/Programming/CPU2021-main/riscv/src/pc.v"
+`include "/mnt/f/Programming/CPU2021-main/riscv/src/pc.v" 
 `include "/mnt/f/Programming/CPU2021-main/riscv/src/decoder.v"
 `include "/mnt/f/Programming/CPU2021-main/riscv/src/rs.v"
 `include "/mnt/f/Programming/CPU2021-main/riscv/src/regfile.v"

@@ -36,7 +36,7 @@
 `define IO_ADDR      32'h30000
 
 `define LUI       6'b000001
-`define AUIPC     6'b000010
+`define AUIPC     6'b000010 
 `define JAL       6'b000011
 `define JALR      6'b000100
 `define BEQ       6'b000101    

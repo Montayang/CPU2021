@@ -25,7 +25,7 @@ module regfile(
     input wire [`tagWidth-1:0] tag_commit
 );
     reg [`dataWidth-1:0] data[`regSize-1:0];
-    reg [`tagWidth-1:0] tag[`regSize-1:0];
+    reg [`tagWidth-1:0] tag[`regSize-1:0]; 
 
     integer i;
     always @(posedge clk) begin

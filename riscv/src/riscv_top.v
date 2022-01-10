@@ -12,7 +12,7 @@ module riscv_top
 (
 	input wire 			EXCLK,
 	input wire			btnC,
-	output wire 		Tx,
+	output wire 		Tx, 
 	input wire 			Rx,
 	output wire			led
 );

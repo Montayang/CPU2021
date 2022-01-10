@@ -60,7 +60,7 @@ module rs (
             pc_to_ex <= `emptyAddr;
             tag_in_rob <= `emptyTag;
             for (i=0; i<`rsSize; i=i+1) begin
-                if_busy_entry[i] <= `FALSE;
+                if_busy_entry[i] <= `FALSE; 
                 Q1_entry[i] <= `emptyTag;
                 Q2_entry[i] <= `emptyTag;
                 op_entry[i] <= `emptyOp;

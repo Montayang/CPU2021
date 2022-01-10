@@ -33,7 +33,7 @@ module ex (
                             pc_to_jump = ($signed(data_rs1_ex) + $signed(imm_ex)) & 32'hfffffffe;
                             wb_data = $signed(pc_ex) + 4;
                         end
-                `BEQ :  begin
+                `BEQ :  begin 
                             if (data_rs1_ex == data_rs2_ex)
                             pc_to_jump = pc_ex + imm_ex;
                         end

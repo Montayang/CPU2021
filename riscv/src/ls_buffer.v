@@ -67,7 +67,7 @@ module lsb (
             //initial lsb_file = $fopen("lsb1.txt");
 
     integer j;
-    always @(posedge clk) begin
+    always @(posedge clk) begin 
                 //$fdisplay(lsb_file,$time);
                 //for (i=1; i<16; i=i+1) $fdisplay(lsb_file," [LSB]if_busy : ",if_busy_entry[i]," ready : ",ready_entry[i]," op : ",op_entry[i]," addr : %h",addr_entry[i]," V1 : %h",V1_entry[i]," Q1 : %h",Q1_entry[i]," V2 : %h",V2_entry[i]," Q2 : %h",Q2_entry[i]," imm : %h",imm_entry[i],"  ",i);
         if (rst || clear) begin
