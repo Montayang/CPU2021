@@ -76,15 +76,15 @@ module rob (
     assign data_rs2_to_decoder = value_entry[tag_rs2_decoder] ? value_entry[tag_rs2_decoder] : `emptyData;
     assign tag_to_decoder = if_idle ? tail : `emptyTag;
 
-            //integer rob_file;
-            //initial rob_file = $fopen("rob1.txt");
+            // integer rob_file;
+            // initial rob_file = $fopen("rob1.txt");
 
     reg j;
     integer i;
     always @(*) begin
         j = `FALSE;
         for (i=1; i<`robSize; i=i+1) begin
-            if ((op_entry[i] == `SB || op_entry[i] == `SH || op_entry[i] == `SW) && cur_inst_addr_lsb == destination_entry[i] && value_entry[i] != `emptyData) j = `TRUE; 
+            if (if_busy_entry[i] && (op_entry[i] == `SB || op_entry[i] == `SH || op_entry[i] == `SW) && cur_inst_addr_lsb == destination_entry[i]) j = `TRUE; 
         end
         if (j || (cur_inst_addr_lsb == wb_addr_lsb)) if_addr_hzd_to_lsb = `TRUE;
         else if_addr_hzd_to_lsb = `FALSE;
@@ -143,10 +143,10 @@ module rob (
                 value_entry[wb_pos_ex] <= wb_data_ex;
                 new_pc_entry[wb_pos_ex] <= pc_to_jump_ex;
                 ready_entry[wb_pos_ex] <= `TRUE;
-                tag_renew_to_rs <= wb_pos_ex;
-                data_renew_to_rs <= wb_data_ex;
-                tag_renew_to_lsb <= wb_pos_ex;
-                data_renew_to_lsb <= wb_data_ex;
+                // tag_renew_to_rs <= wb_pos_ex;
+                // data_renew_to_rs <= wb_data_ex;
+                // tag_renew_to_lsb <= wb_pos_ex;
+                // data_renew_to_lsb <= wb_data_ex;
             end
             if (wb_pos_lsb != `emptyTag && if_busy_entry[wb_pos_lsb]) begin
                 if (in_ioin) begin
@@ -157,10 +157,10 @@ module rob (
                     ready_entry[wb_pos_lsb] <= `TRUE;
                     if_IO[wb_pos_lsb] <= `FALSE;
                     if (op_entry[wb_pos_lsb] == `SB || op_entry[wb_pos_lsb] == `SH || op_entry[wb_pos_lsb] == `SW) destination_entry[wb_pos_lsb] <= wb_addr_lsb;
-                    tag_renew_to_rs <= wb_pos_lsb;
-                    data_renew_to_rs <= wb_data_lsb;
-                    tag_renew_to_lsb <= wb_pos_lsb;
-                    data_renew_to_lsb <= wb_data_lsb;
+                    // tag_renew_to_rs <= wb_pos_lsb;
+                    // data_renew_to_rs <= wb_data_lsb;
+                    // tag_renew_to_lsb <= wb_pos_lsb;
+                    // data_renew_to_lsb <= wb_data_lsb;
                 end
             end
             //commit
@@ -182,6 +182,10 @@ module rob (
                                 pos_commit <= destination_entry[head][4:0];
                                 data_commit <= value_entry[head];
                                 tag_commit <= head;
+                                    tag_renew_to_rs <= head;
+                                    data_renew_to_rs <= value_entry[head];
+                                    tag_renew_to_lsb <= head;
+                                    data_renew_to_lsb <= value_entry[head];
                                 clear_lsb <= `TRUE;
                                 clear_reg <= `TRUE;
                                 clear_rs <= `TRUE;
@@ -214,6 +218,10 @@ module rob (
                                 pos_commit <= destination_entry[head][4:0];
                                 data_commit <= value_entry[head];
                                 tag_commit <= head;
+                                    tag_renew_to_rs <= head;
+                                    data_renew_to_rs <= value_entry[head];
+                                    tag_renew_to_lsb <= head;
+                                    data_renew_to_lsb <= value_entry[head];
                                 if (((head+1 == tail) || (head == `robSize-1 && tail == 1)) && !op_decoder) if_empty <= `TRUE;
                                 head <= (head == `robSize-1) ? 1:head+1;
                                 if_busy_entry[head] <= `FALSE;
@@ -248,10 +256,6 @@ module rob (
                         value_entry[head] <= data_mem;
                         if_IO[head] <= `FALSE;
                         ready_entry[head] <= `TRUE;
-                        tag_renew_to_rs <= head;
-                        data_renew_to_rs <= data_mem;
-                        tag_renew_to_lsb <= head;
-                        data_renew_to_lsb <= data_mem;
                     end
                 end
             end

@@ -45,13 +45,13 @@ module rs (
     wire [4:0] pos_to_ex;
     assign if_idle = pos_for_newInst != 0;
 
-            integer rs_file;
-            initial rs_file = $fopen("rs1.txt");
+            //integer rs_file;
+            //initial rs_file = $fopen("rs1.txt");
 
     integer i;
     always @(posedge clk) begin
                         //$fdisplay(rs_file,$time);
-                        //for (i=1; i<16; i=i+1) $fdisplay(rs_file," [RS]if_busy : ",if_busy_entry[i]," pc : %h",pc_entry[i]," ready : ",ready_entry[i]," Q1 : ",Q1_entry[i],"  ",i);
+                        //for (i=1; i<16; i=i+1) $fdisplay(rs_file," [RS]if_busy : ",if_busy_entry[i]," pc : %h",pc_entry[i]," ready : ",ready_entry[i]," Q1 : ",Q1_entry[i]," V1 : ",V1_entry[i]," Q2 : ",Q2_entry[i]," V2 : ",V2_entry[i],"  ",i);
         if (rst || clear) begin
             op_type_to_ex <= `emptyOp;
             data_rs1_to_ex <= `emptyData;
@@ -102,6 +102,7 @@ module rs (
                 end
             end
             //issue to ex
+            op_type_to_ex <= `emptyOp;
             if (pos_to_ex > 0 && pos_to_ex < `rsSize) begin
                 if_busy_entry[pos_to_ex] <= `FALSE;
                 op_type_to_ex  <=   op_entry[pos_to_ex];
